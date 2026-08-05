@@ -97,7 +97,27 @@ Leave `S3_ENDPOINT` **unset** for Amazon S3.
 
 ---
 
-## 3. Fast buffering (what we do + what you should do)
+## 3. S3 layout (required)
+
+Follow **`human/s3/MANIFEST.md`** exactly for keys and IDs.
+
+Quick create (needs AWS CLI credentials):
+
+```bash
+cd human/s3
+./setup-bucket.sh ritivel-gdpval-eval-videos us-east-1 https://YOUR-SERVICE.onrender.com
+# → writes render-env.generated.txt with keys to paste into Render
+```
+
+Bulk upload one file:
+
+```bash
+./upload-video.sh --task e222075d-5d62-4757-ae3c-e34b0846583b --gold --file ./gold.mp4
+./upload-video.sh --task e222075d-5d62-4757-ae3c-e34b0846583b \
+  --model 00000000-0000-4000-8000-0000000000a1 --iter 0 --file ./sample.mp4
+```
+
+## 4. Fast buffering
 
 ### Built into the app
 
@@ -128,7 +148,7 @@ Direct S3 signed URLs are enough for ~40–45 private clips. If graders are glob
 
 ---
 
-## 4. Cloudflare R2 alternative
+## 5. Cloudflare R2 alternative
 
 Same env vars, plus:
 
@@ -141,7 +161,7 @@ R2 has no egress fees; AWS S3 charges egress. Either works with this app.
 
 ---
 
-## 5. Post-deploy check
+## 6. Post-deploy check
 
 1. Admin → upload 1 gold + 1 model (same task).  
 2. Grader opens the comparison — Network tab should show video GETs to `*.amazonaws.com` (or R2), not only your Render host.  

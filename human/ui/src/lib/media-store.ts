@@ -11,14 +11,18 @@ export type StoredMedia = {
   original_name: string;
 };
 
+export type VideoObjectMeta = {
+  taskId: string;
+  isGold: boolean;
+  modelId?: string | null;
+  iteration?: number;
+};
+
 export function mediaBackend(): "fs" | "s3" {
   return process.env.MEDIA_BACKEND === "s3" ? "s3" : "fs";
 }
 
 function s3Client(): S3Client {
-  // AWS S3: set S3_REGION (e.g. us-east-1). Leave S3_ENDPOINT unset.
-  // Optional: S3_USE_ACCELERATE=true for Transfer Acceleration (faster global GETs).
-  // R2: S3_REGION=auto + S3_ENDPOINT=https://<account>.r2.cloudflarestorage.com
   const region = process.env.S3_REGION || "us-east-1";
   const endpoint = process.env.S3_ENDPOINT || undefined;
   const accelerate =
@@ -41,13 +45,33 @@ function s3Bucket(): string {
   return b;
 }
 
+/**
+ * Canonical object key layout (see human/s3/MANIFEST.md):
+ *   media/tasks/{taskId}/gold/{videoId}{ext}
+ *   media/tasks/{taskId}/models/{modelId}/iter-{n}/{videoId}{ext}
+ */
+export function buildMediaKey(
+  videoId: string,
+  ext: string,
+  meta: VideoObjectMeta
+): string {
+  const prefix = (process.env.S3_PREFIX || "media").replace(/\/$/, "");
+  const e = ext.startsWith(".") ? ext : `.${ext}`;
+  if (meta.isGold) {
+    return `${prefix}/tasks/${meta.taskId}/gold/${videoId}${e}`;
+  }
+  const modelId = meta.modelId || "unknown-model";
+  const iter = Number.isFinite(meta.iteration) ? meta.iteration : 0;
+  return `${prefix}/tasks/${meta.taskId}/models/${modelId}/iter-${iter}/${videoId}${e}`;
+}
+
+/** @deprecated Prefer buildMediaKey with task/model meta. */
 function s3Key(videoId: string, ext: string): string {
   const prefix = (process.env.S3_PREFIX || "media").replace(/\/$/, "");
   const e = ext.startsWith(".") ? ext : `.${ext}`;
-  return `${prefix}/${videoId}${e}`;
+  return `${prefix}/legacy/${videoId}${e}`;
 }
 
-/** Signed URL lifetime (seconds). Default 2h — long enough for a grading session. */
 function signedUrlTtl(): number {
   const n = Number(process.env.S3_SIGNED_URL_TTL || 7200);
   return Number.isFinite(n) && n > 60 ? n : 7200;
@@ -69,13 +93,16 @@ export function parseS3Path(
 export async function storeVideoBytes(
   videoId: string,
   bytes: Buffer,
-  originalName: string
+  originalName: string,
+  meta?: VideoObjectMeta
 ): Promise<StoredMedia> {
   const ext = path.extname(originalName) || ".mp4";
   const contentType = mimeForExt(ext);
 
   if (mediaBackend() === "s3") {
-    const key = s3Key(videoId, ext);
+    const key = meta
+      ? buildMediaKey(videoId, ext, meta)
+      : s3Key(videoId, ext);
     const bucket = s3Bucket();
     const client = s3Client();
 
@@ -88,6 +115,13 @@ export async function storeVideoBytes(
         ContentType: contentType,
         CacheControl: "public, max-age=31536000, immutable",
         ContentDisposition: `inline; filename="${path.basename(originalName).replace(/"/g, "")}"`,
+        Metadata: {
+          task_id: meta?.taskId || "",
+          is_gold: meta?.isGold ? "1" : "0",
+          model_id: meta?.modelId || "",
+          iteration: String(meta?.iteration ?? 0),
+          video_id: videoId,
+        },
       },
       queueSize: 4,
       partSize: 8 * 1024 * 1024,

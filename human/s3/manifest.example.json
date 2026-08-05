@@ -1,0 +1,28 @@
+{
+  "version": 1,
+  "bucket": "ritivel-gdpval-eval-videos",
+  "prefix": "media",
+  "region": "us-east-1",
+  "videos": [
+    {
+      "video_id": "REPLACE-WITH-UUID",
+      "task_id": "e222075d-5d62-4757-ae3c-e34b0846583b",
+      "is_gold": true,
+      "model_id": null,
+      "iteration": 0,
+      "cost_usd": 0,
+      "original_name": "gold-green-energy.mp4",
+      "key": "media/tasks/e222075d-5d62-4757-ae3c-e34b0846583b/gold/REPLACE-WITH-UUID.mp4"
+    },
+    {
+      "video_id": "REPLACE-WITH-UUID",
+      "task_id": "e222075d-5d62-4757-ae3c-e34b0846583b",
+      "is_gold": false,
+      "model_id": "00000000-0000-4000-8000-0000000000a1",
+      "iteration": 0,
+      "cost_usd": 0,
+      "original_name": "model-sample-iter0.mp4",
+      "key": "media/tasks/e222075d-5d62-4757-ae3c-e34b0846583b/models/00000000-0000-4000-8000-0000000000a1/iter-0/REPLACE-WITH-UUID.mp4"
+    }
+  ]
+}

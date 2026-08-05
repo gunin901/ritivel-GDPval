@@ -53,7 +53,17 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "empty file" }, { status: 400 });
   }
 
-  const stored = await storeVideoBytes(videoId, bytes, file.name || `${videoId}.mp4`);
+  const stored = await storeVideoBytes(
+    videoId,
+    bytes,
+    file.name || `${videoId}.mp4`,
+    {
+      taskId: task_id,
+      isGold: is_gold,
+      modelId: model_id,
+      iteration,
+    }
+  );
   const db = getDb();
   db.prepare(
     `INSERT INTO videos

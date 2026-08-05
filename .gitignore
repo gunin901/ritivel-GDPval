@@ -12,6 +12,8 @@ human/data-smoke/
 human/ui/node_modules/
 human/ui/.next/
 human/ui/.env.local
+human/s3/render-env.generated.txt
+human/s3/manifest.generated.json
 
 # Python
 __pycache__/
