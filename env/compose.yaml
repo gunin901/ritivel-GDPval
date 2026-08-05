@@ -1,0 +1,63 @@
+# gdpval-video sandbox + allowlisted forward proxy.
+# Sandbox sits on an internal network only; proxy bridges to egress (fail-closed).
+#
+# Usage (after ./env/build.sh):
+#   REFERENCE_DIR=/path/to/refs docker compose -f env/compose.yaml up -d
+# Or via harness.sandbox.Sandbox which manages lifecycle.
+
+name: gdpval-video
+
+services:
+  proxy:
+    build:
+      context: ./proxy
+      dockerfile: Dockerfile
+    image: gdpval-video-proxy:local
+    pull_policy: never
+    networks:
+      - isolated
+      - egress
+    restart: unless-stopped
+
+  sandbox:
+    image: gdpval-video:local
+    pull_policy: never
+    platform: linux/amd64
+    init: true
+    user: appuser
+    working_dir: /workspace
+    command: ["sleep", "infinity"]
+    cpus: 8
+    mem_limit: 16g
+    # Repo-root .env (PEXELS_API_KEY / PIXABAY_API_KEY). Optional so smoke works without keys.
+    env_file:
+      - path: ../.env
+        required: false
+    environment:
+      HTTP_PROXY: http://proxy:3128
+      HTTPS_PROXY: http://proxy:3128
+      http_proxy: http://proxy:3128
+      https_proxy: http://proxy:3128
+      ALL_PROXY: http://proxy:3128
+      NO_PROXY: localhost,127.0.0.1,proxy
+      no_proxy: localhost,127.0.0.1,proxy
+      # Explicit so compose host env / Sandbox-loaded .env also win when set.
+      PEXELS_API_KEY: ${PEXELS_API_KEY:-}
+      PIXABAY_API_KEY: ${PIXABAY_API_KEY:-}
+    volumes:
+      # Host path injected by Sandbox / compose override; empty dir is fine for smoke.
+      - ${REFERENCE_DIR:-./smoke/fixtures/reference_placeholder}:/workspace/reference_files:ro
+      - ${DELIVERABLE_DIR:-./smoke/fixtures/deliverable_placeholder}:/workspace/deliverable_files
+      - ${SCRATCH_DIR:-./smoke/fixtures/scratch_placeholder}:/workspace/scratch
+    networks:
+      - isolated
+    depends_on:
+      - proxy
+    stdin_open: true
+    tty: true
+
+networks:
+  isolated:
+    internal: true
+  egress:
+    driver: bridge

@@ -1,0 +1,7 @@
+# Video-task overlay on top of Inspect GDPval base (paper §A.6.4).
+scenedetect[opencv]==0.6.4
+opentimelineio==0.17.0
+gTTS==2.5.1
+imagehash==4.3.1
+# Inspect pins librosa==0.8.1 which breaks on numpy 1.24 (np.complex removed).
+librosa==0.10.2

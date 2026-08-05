@@ -1,0 +1,20 @@
+# Local / generated artifacts
+env/.image_digest
+env/smoke/fixtures/deliverable_placeholder/*
+env/smoke/fixtures/scratch_placeholder/*
+!env/smoke/fixtures/**/.keep
+runs/
+media/
+
+# Python
+__pycache__/
+*.py[cod]
+.Python
+.venv/
+venv/
+
+# OS
+.DS_Store
+
+# secrets
+.env

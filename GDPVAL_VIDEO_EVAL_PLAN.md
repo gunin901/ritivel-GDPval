@@ -119,7 +119,7 @@ imagehash==4.3.1
 
 ### 4.3 Tools exposed to the agent
 
-Same surface for OpenAI and Claude:
+Same surface for OpenAI and Claude. **Implemented host bridge:** [`harness.sandbox.Sandbox`](harness/README.md) (see that doc for signatures, return types, lifecycle, and a `tools.py` sketch).
 
 
 | Tool                             | Role                                                                                                                           |
@@ -131,7 +131,7 @@ Same surface for OpenAI and Claude:
 | `web_get(url)`                   | Proxied GET/HEAD only, allowlisted stock domains, response cached                                                              |
 
 
-**Allowlist (Green Energy):** `pexels.com`, `videos.pexels.com`, `pixabay.com`, `cdn.pixabay.com`, `mixkit.co`, `coverr.co`, `videvo.net`, `freesound.org`, `incompetech.com`, `freepd.com`, `archive.org`, `commons.wikimedia.org`, plus watermarked-preview hosts (`pond5.com`, `istockphoto.com`, `shutterstock.com`, `stock.adobe.com`) as the prompt permits.
+**Allowlist (Green Energy):** stock hosts in `env/proxy/allowlist.txt`. Prefer **Pexels/Pixabay official APIs** (`api.pexels.com`, `pixabay.com/api/…` with keys in `.env`) — HTML pages are often Cloudflare-blocked. Also: `mixkit.co`, `coverr.co`, `videvo.net`, `freesound.org`, `incompetech.com`, `freepd.com`, `archive.org`, `commons.wikimedia.org`, plus watermarked-preview hosts as the prompt permits.
 
 ### 4.4 Repos to take inspiration from
 
@@ -436,10 +436,12 @@ gdpval-video-eval/
 │  ├─ docker-requirements.txt
 │  └─ proxy/                       # stock-site allowlist + cache
 ├─ harness/
-│  ├─ run.py                       # 8×2×3 driver
-│  ├─ prompts.py                   # suffixes
-│  ├─ tools.py                     # bash, python, inspect_media, web_get
-│  └─ openai_path.py / claude_path.py
+│  ├─ README.md                    # ★ agent ↔ Sandbox integration contract
+│  ├─ sandbox.py                   # host bridge (bash/python/inspect_media/web_get/…)
+│  ├─ run.py                       # 8×2×3 driver (TODO)
+│  ├─ prompts.py                   # suffixes (TODO)
+│  ├─ tools.py                     # thin wrappers over Sandbox (TODO)
+│  └─ openai_path.py / claude_path.py  # (TODO)
 ├─ human/
 │  ├─ ui/                          # blinded A/B player
 │  └─ export.py

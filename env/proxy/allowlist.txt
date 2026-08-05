@@ -1,0 +1,44 @@
+# Stock / VO hosts the sandbox may fetch via the forward proxy (GET/HEAD only).
+# Matching is suffix-based: "pexels.com" also allows "www.pexels.com" and "videos.pexels.com".
+#
+# HTML pages on pexels.com / pixabay.com often return Cloudflare challenges (HTTP 403
+# "Just a moment...") to non-browser clients. Prefer the official APIs:
+#   api.pexels.com  (Authorization: $PEXELS_API_KEY)
+#   pixabay.com/api/... (?key=$PIXABAY_API_KEY)
+# then download the MP4/CDN link from the JSON response.
+# Mixkit / coverr / archive.org / wikimedia remain good keyless fallbacks.
+
+api.pexels.com
+pexels.com
+videos.pexels.com
+images.pexels.com
+# Pexels video_files links sometimes resolve via Vimeo CDN
+vimeocdn.com
+player.vimeo.com
+pixabay.com
+cdn.pixabay.com
+i.vimeocdn.com
+mixkit.co
+assets.mixkit.co
+coverr.co
+cdn.coverr.co
+videvo.net
+cdn.videvo.net
+freesound.org
+cdn.freesound.org
+incompetech.com
+freepd.com
+archive.org
+download.archive.org
+commons.wikimedia.org
+upload.wikimedia.org
+pond5.com
+istockphoto.com
+media.istockphoto.com
+shutterstock.com
+stock.adobe.com
+
+# gTTS scratch VO (Green Energy); disable by removing these lines if VO must stay offline
+translate.google.com
+www.google.com
+storage.googleapis.com
