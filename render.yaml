@@ -1,0 +1,36 @@
+# Render Blueprint — deploy from repo root
+services:
+  - type: web
+    name: gdpval-human-eval
+    runtime: docker
+    plan: starter
+    dockerfilePath: ./human/ui/Dockerfile
+    dockerContext: .
+    healthCheckPath: /login
+    envVars:
+      - key: SESSION_SECRET
+        generateValue: true
+      - key: BOOTSTRAP_ADMIN_EMAIL
+        sync: false
+      - key: DATA_DIR
+        value: /var/data
+      - key: NODE_ENV
+        value: production
+      - key: MEDIA_BACKEND
+        value: fs
+      - key: S3_BUCKET
+        sync: false
+      - key: S3_ENDPOINT
+        sync: false
+      - key: S3_ACCESS_KEY_ID
+        sync: false
+      - key: S3_SECRET_ACCESS_KEY
+        sync: false
+      - key: S3_REGION
+        value: auto
+      - key: S3_PREFIX
+        value: media
+    disk:
+      name: gdpval-data
+      mountPath: /var/data
+      sizeGB: 25

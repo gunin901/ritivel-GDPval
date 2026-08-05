@@ -1,0 +1,6 @@
+# GDPval human eval data
+human/data/
+human/data-smoke/
+human/ui/.env.local
+human/ui/node_modules/
+human/ui/.next/

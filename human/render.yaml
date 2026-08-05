@@ -1,0 +1,22 @@
+# Render Blueprint — see also /render.yaml at repo root
+services:
+  - type: web
+    name: gdpval-human-eval
+    runtime: docker
+    plan: starter
+    dockerfilePath: ./human/ui/Dockerfile
+    dockerContext: .
+    healthCheckPath: /login
+    envVars:
+      - key: SESSION_SECRET
+        generateValue: true
+      - key: DATA_DIR
+        value: /var/data
+      - key: NODE_ENV
+        value: production
+      - key: MEDIA_BACKEND
+        value: fs
+    disk:
+      name: gdpval-data
+      mountPath: /var/data
+      sizeGB: 25
