@@ -1,12 +1,8 @@
 import fs from "fs";
 import path from "path";
-import {
-  S3Client,
-  PutObjectCommand,
-  GetObjectCommand,
-  HeadObjectCommand,
-} from "@aws-sdk/client-s3";
+import { S3Client, GetObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
+import { Upload } from "@aws-sdk/lib-storage";
 import { mediaDir, mediaPath, mimeForExt, mimeForPath } from "./paths";
 
 export type StoredMedia = {
@@ -15,17 +11,23 @@ export type StoredMedia = {
   original_name: string;
 };
 
-function mediaBackend(): "fs" | "s3" {
+export function mediaBackend(): "fs" | "s3" {
   return process.env.MEDIA_BACKEND === "s3" ? "s3" : "fs";
 }
 
 function s3Client(): S3Client {
-  const region = process.env.S3_REGION || "auto";
-  const endpoint = process.env.S3_ENDPOINT; // R2: https://<accountid>.r2.cloudflarestorage.com
+  // AWS S3: set S3_REGION (e.g. us-east-1). Leave S3_ENDPOINT unset.
+  // Optional: S3_USE_ACCELERATE=true for Transfer Acceleration (faster global GETs).
+  // R2: S3_REGION=auto + S3_ENDPOINT=https://<account>.r2.cloudflarestorage.com
+  const region = process.env.S3_REGION || "us-east-1";
+  const endpoint = process.env.S3_ENDPOINT || undefined;
+  const accelerate =
+    !endpoint && process.env.S3_USE_ACCELERATE === "true";
   return new S3Client({
     region,
-    endpoint: endpoint || undefined,
+    endpoint,
     forcePathStyle: !!endpoint,
+    useAccelerateEndpoint: accelerate,
     credentials: {
       accessKeyId: process.env.S3_ACCESS_KEY_ID || "",
       secretAccessKey: process.env.S3_SECRET_ACCESS_KEY || "",
@@ -45,7 +47,15 @@ function s3Key(videoId: string, ext: string): string {
   return `${prefix}/${videoId}${e}`;
 }
 
-function parseS3Path(mediaPathValue: string): { bucket: string; key: string } | null {
+/** Signed URL lifetime (seconds). Default 2h — long enough for a grading session. */
+function signedUrlTtl(): number {
+  const n = Number(process.env.S3_SIGNED_URL_TTL || 7200);
+  return Number.isFinite(n) && n > 60 ? n : 7200;
+}
+
+export function parseS3Path(
+  mediaPathValue: string
+): { bucket: string; key: string } | null {
   if (mediaPathValue.startsWith("s3://")) {
     const rest = mediaPathValue.slice("s3://".length);
     const i = rest.indexOf("/");
@@ -62,17 +72,28 @@ export async function storeVideoBytes(
   originalName: string
 ): Promise<StoredMedia> {
   const ext = path.extname(originalName) || ".mp4";
+  const contentType = mimeForExt(ext);
+
   if (mediaBackend() === "s3") {
     const key = s3Key(videoId, ext);
     const bucket = s3Bucket();
-    await s3Client().send(
-      new PutObjectCommand({
+    const client = s3Client();
+
+    const upload = new Upload({
+      client,
+      params: {
         Bucket: bucket,
         Key: key,
         Body: bytes,
-        ContentType: mimeForExt(ext),
-      })
-    );
+        ContentType: contentType,
+        CacheControl: "public, max-age=31536000, immutable",
+        ContentDisposition: `inline; filename="${path.basename(originalName).replace(/"/g, "")}"`,
+      },
+      queueSize: 4,
+      partSize: 8 * 1024 * 1024,
+    });
+    await upload.done();
+
     return {
       media_path: `s3://${bucket}/${key}`,
       original_name: originalName,
@@ -84,62 +105,47 @@ export async function storeVideoBytes(
   return { media_path: dest, original_name: originalName };
 }
 
+/** Create a time-limited GET URL the browser can stream with Range requests. */
+export async function createPlaybackUrl(
+  storedPath: string
+): Promise<string | null> {
+  const parsed = parseS3Path(storedPath);
+  if (!parsed) return null;
+
+  const client = s3Client();
+  return getSignedUrl(
+    client,
+    new GetObjectCommand({
+      Bucket: parsed.bucket,
+      Key: parsed.key,
+      ResponseContentDisposition: "inline",
+    }),
+    { expiresIn: signedUrlTtl() }
+  );
+}
+
 export type ResolvedMedia = {
   kind: "file" | "redirect";
-  /** Local filesystem path when kind=file */
   filePath?: string;
-  /** Signed URL when kind=redirect */
   url?: string;
   contentType: string;
   size?: number;
 };
 
-/**
- * Resolve a video row's media_path for playback.
- * Prefer DB media_path; fall back to conventional local mediaPath(videoId).
- */
 export async function resolveMediaForPlayback(
   videoId: string,
   storedPath: string
 ): Promise<ResolvedMedia | null> {
-  const s3 = parseS3Path(storedPath);
-  if (s3 || (mediaBackend() === "s3" && !fs.existsSync(storedPath))) {
-    const bucket = s3?.bucket || s3Bucket();
-    const key =
-      s3?.key ||
-      (() => {
-        // Infer key from conventional naming
-        for (const ext of [".mp4", ".mov", ".webm"]) {
-          return s3Key(videoId, ext);
-        }
-        return s3Key(videoId, ".mp4");
-      })();
-
-    try {
-      const client = s3Client();
-      const head = await client.send(
-        new HeadObjectCommand({ Bucket: bucket, Key: key })
-      );
-      const url = await getSignedUrl(
-        client,
-        new GetObjectCommand({ Bucket: bucket, Key: key }),
-        { expiresIn: 60 * 60 }
-      );
-      const contentType =
-        head.ContentType ||
-        mimeForExt(path.extname(key) || ".mp4");
-      return {
-        kind: "redirect",
-        url,
-        contentType,
-        size: head.ContentLength,
-      };
-    } catch {
-      // fall through to local
-    }
+  if (parseS3Path(storedPath)) {
+    const url = await createPlaybackUrl(storedPath);
+    if (!url) return null;
+    return {
+      kind: "redirect",
+      url,
+      contentType: mimeForExt(path.extname(storedPath) || ".mp4"),
+    };
   }
 
-  // Local file: prefer stored absolute path if it exists
   let filePath = storedPath;
   if (!filePath || !fs.existsSync(filePath)) {
     filePath = mediaPath(videoId);

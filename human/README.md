@@ -43,4 +43,6 @@ npm run smoke
 
 ## Deploy
 
-See [DEPLOY.md](./DEPLOY.md) for Render (recommended), Vercel limitations, and video hosting for 40–45 clips.
+**Render** for the app + **Amazon S3** for videos (recommended). See [DEPLOY.md](./DEPLOY.md).
+
+Vercel is not suitable (no durable SQLite / video disk).

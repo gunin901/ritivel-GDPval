@@ -3,6 +3,7 @@ import { requireParticipant } from "@/lib/auth";
 import { getDb, type ComparisonRow, type VideoRow } from "@/lib/db";
 import { getTask } from "@/lib/tasks";
 import { ensureAssignments } from "@/lib/assignments";
+import { createPlaybackUrl, parseS3Path } from "@/lib/media-store";
 
 export async function GET(
   _req: Request,
@@ -25,8 +26,32 @@ export async function GET(
   const sample = db
     .prepare("SELECT * FROM videos WHERE video_id = ?")
     .get(comp.video_id_model) as VideoRow;
+  const gold = db
+    .prepare("SELECT * FROM videos WHERE video_id = ?")
+    .get(comp.video_id_gold) as VideoRow;
   const task = getTask(sample.task_id);
   const progress = ensureAssignments(session.participantId);
+
+  // Default: same-origin media proxy (works for local FS).
+  // When objects live on S3, return pre-signed URLs so the browser streams
+  // directly from S3/CloudFront (Range requests, no Render bandwidth hop).
+  let mediaA = `/api/media/${comp.id}/A`;
+  let mediaB = `/api/media/${comp.id}/B`;
+
+  const order = JSON.parse(comp.order_shown) as ["model" | "gold", "model" | "gold"];
+  const sideVideo = (side: "A" | "B") => {
+    const role = side === "A" ? order[0] : order[1];
+    return role === "gold" ? gold : sample;
+  };
+
+  if (parseS3Path(sample.media_path) || parseS3Path(gold.media_path)) {
+    const [urlA, urlB] = await Promise.all([
+      createPlaybackUrl(sideVideo("A").media_path),
+      createPlaybackUrl(sideVideo("B").media_path),
+    ]);
+    if (urlA) mediaA = urlA;
+    if (urlB) mediaB = urlB;
+  }
 
   return NextResponse.json({
     id: comp.id,
@@ -39,8 +64,8 @@ export async function GET(
       reference_file_urls: task?.reference_file_urls ?? [],
     },
     media: {
-      A: `/api/media/${comp.id}/A`,
-      B: `/api/media/${comp.id}/B`,
+      A: mediaA,
+      B: mediaB,
     },
     progress: progress
       ? {

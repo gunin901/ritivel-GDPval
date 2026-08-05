@@ -1,4 +1,4 @@
-# Render Blueprint — see also /render.yaml at repo root
+# See /render.yaml at repo root (preferred).
 services:
   - type: web
     name: gdpval-human-eval
@@ -12,11 +12,11 @@ services:
         generateValue: true
       - key: DATA_DIR
         value: /var/data
+      - key: MEDIA_BACKEND
+        value: s3
       - key: NODE_ENV
         value: production
-      - key: MEDIA_BACKEND
-        value: fs
     disk:
       name: gdpval-data
       mountPath: /var/data
-      sizeGB: 25
+      sizeGB: 5

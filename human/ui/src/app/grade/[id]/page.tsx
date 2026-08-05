@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { FAILURE_TAGS, FAILURE_TAG_INFO, wordCount } from "@/lib/constants";
 
@@ -17,6 +17,62 @@ type Detail = {
   media: { A: string; B: string };
   progress: { index: number; total: number; remaining: number };
 };
+
+function StreamPlayer({
+  label,
+  src,
+}: {
+  label: string;
+  src: string;
+}) {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const [ready, setReady] = useState(false);
+  const [buffering, setBuffering] = useState(true);
+
+  useEffect(() => {
+    setReady(false);
+    setBuffering(true);
+    const el = videoRef.current;
+    if (!el) return;
+    // Kick off network fetch immediately for both sides in parallel
+    el.load();
+  }, [src]);
+
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center justify-between gap-2">
+        <p className="text-sm font-bold uppercase tracking-wide text-violet-900">
+          {label}
+        </p>
+        <p className="text-xs font-semibold text-[var(--muted)]">
+          {ready ? "Ready" : buffering ? "Buffering…" : "Loading…"}
+        </p>
+      </div>
+      <div className="relative overflow-hidden rounded-xl bg-black">
+        <video
+          ref={videoRef}
+          className="aspect-video w-full"
+          controls
+          playsInline
+          preload="auto"
+          src={src}
+          onWaiting={() => setBuffering(true)}
+          onLoadStart={() => setBuffering(true)}
+          onCanPlay={() => {
+            setBuffering(false);
+            setReady(true);
+          }}
+          onPlaying={() => setBuffering(false)}
+        />
+        {buffering && !ready ? (
+          <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-black/40 text-sm font-semibold text-white">
+            Buffering…
+          </div>
+        ) : null}
+      </div>
+    </div>
+  );
+}
 
 export default function GradeDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -97,20 +153,8 @@ export default function GradeDetailPage() {
       </details>
 
       <div className="grid gap-4 lg:grid-cols-2">
-        {(["A", "B"] as const).map((side) => (
-          <div key={side} className="space-y-2">
-            <p className="text-sm font-bold uppercase tracking-wide text-violet-900">
-              Deliverable {side}
-            </p>
-            <video
-              className="aspect-video w-full rounded-xl bg-black"
-              controls
-              playsInline
-              preload="metadata"
-              src={detail.media[side]}
-            />
-          </div>
-        ))}
+        <StreamPlayer label="Deliverable A" src={detail.media.A} />
+        <StreamPlayer label="Deliverable B" src={detail.media.B} />
       </div>
 
       <form onSubmit={onSubmit} className="space-y-6">

@@ -1,4 +1,4 @@
-# Render Blueprint — deploy from repo root
+# Render Blueprint — app on Render, videos on S3
 services:
   - type: web
     name: gdpval-human-eval
@@ -17,20 +17,24 @@ services:
       - key: NODE_ENV
         value: production
       - key: MEDIA_BACKEND
-        value: fs
+        value: s3
       - key: S3_BUCKET
         sync: false
-      - key: S3_ENDPOINT
-        sync: false
+      - key: S3_REGION
+        value: us-east-1
       - key: S3_ACCESS_KEY_ID
         sync: false
       - key: S3_SECRET_ACCESS_KEY
         sync: false
-      - key: S3_REGION
-        value: auto
       - key: S3_PREFIX
         value: media
+      - key: S3_SIGNED_URL_TTL
+        value: "7200"
+      - key: S3_USE_ACCELERATE
+        value: "false"
+      - key: S3_ENDPOINT
+        sync: false
     disk:
       name: gdpval-data
       mountPath: /var/data
-      sizeGB: 25
+      sizeGB: 5
