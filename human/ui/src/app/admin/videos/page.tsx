@@ -12,6 +12,7 @@ type Video = {
   iteration: number;
   original_name: string;
   cost_usd: number;
+  media_path: string;
 };
 
 const TASKS = TASK_OPTIONS;
@@ -22,6 +23,7 @@ export default function VideosPage() {
   const [error, setError] = useState("");
   const [msg, setMsg] = useState("");
   const [uploading, setUploading] = useState(false);
+  const [syncing, setSyncing] = useState(false);
 
   const [file, setFile] = useState<File | null>(null);
   const [taskId, setTaskId] = useState<string>(TASKS[0]?.id ?? "");
@@ -40,15 +42,14 @@ export default function VideosPage() {
         if (v.error) throw new Error(v.error);
         setModels(m as Model[]);
         setVideos(v as Video[]);
-        if (!modelId && m[0]) setModelId(m[0].id);
+        setModelId((prev) => prev || (m[0]?.id ?? ""));
       })
       .catch((e: Error) => setError(e.message));
-  }, [modelId]);
+  }, []);
 
   useEffect(() => {
     load();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [load]);
 
   async function onUpload(e: FormEvent) {
     e.preventDefault();
@@ -72,11 +73,30 @@ export default function VideosPage() {
     }
     setMsg(
       `Uploaded ${data.video_id}${
-        data.assigned ? ` · assigned to ${data.assigned} queue slot(s)` : ""
+        data.assigned ? ` · assigned ${data.assigned} comparison(s)` : ""
       }`
     );
     setFile(null);
     load();
+  }
+
+  async function onRefreshFromS3() {
+    setSyncing(true);
+    setError("");
+    setMsg("");
+    try {
+      const res = await fetch("/api/admin/sync", { method: "POST" });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Sync failed");
+      setMsg(
+        `S3 refresh: scanned ${data.scanned}, inserted ${data.inserted}, updated ${data.updated}, new comparisons ${data.assigned}`
+      );
+      load();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Sync failed");
+    } finally {
+      setSyncing(false);
+    }
   }
 
   async function deactivate(videoId: string) {
@@ -88,14 +108,29 @@ export default function VideosPage() {
     load();
   }
 
+  function taskLabel(id: string) {
+    return TASKS.find((t) => t.id === id)?.name ?? id.slice(0, 8);
+  }
+
   return (
     <div className="space-y-8">
-      <div>
-        <h1 className="text-3xl font-bold text-violet-950">Videos</h1>
-        <p className="mt-1 text-violet-700">
-          Upload H.264 MP4 when possible for smooth browser playback. Each task
-          needs at least one gold before model samples enter grader queues.
-        </p>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="text-3xl font-bold text-violet-950">Videos</h1>
+          <p className="mt-1 max-w-2xl text-violet-700">
+            Each upload stores the file plus metadata (task, gold/model, cost,
+            iteration) in S3. Click <strong>Refresh from S3</strong> after
+            external uploads so admin + grader queues pick up new comparisons.
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={onRefreshFromS3}
+          disabled={syncing}
+          className="rounded-xl border border-[var(--border)] bg-white px-4 py-2.5 text-sm font-bold text-violet-900 hover:bg-[var(--surface)] disabled:opacity-60"
+        >
+          {syncing ? "Refreshing…" : "Refresh from S3"}
+        </button>
       </div>
 
       <form
@@ -132,7 +167,7 @@ export default function VideosPage() {
             checked={isGold}
             onChange={(e) => setIsGold(e.target.checked)}
           />
-          Gold reference
+          Gold (expert deliverable)
         </label>
         {!isGold ? (
           <label className="text-sm font-semibold">
@@ -149,19 +184,11 @@ export default function VideosPage() {
               ))}
             </select>
           </label>
-        ) : null}
+        ) : (
+          <div />
+        )}
         <label className="text-sm font-semibold">
-          Iteration / sample #
-          <input
-            className="mt-1 w-full rounded-xl border border-[var(--border)] bg-white px-3 py-2"
-            type="number"
-            min={0}
-            value={iteration}
-            onChange={(e) => setIteration(Number(e.target.value))}
-          />
-        </label>
-        <label className="text-sm font-semibold">
-          Cost USD
+          Cost (USD)
           <input
             className="mt-1 w-full rounded-xl border border-[var(--border)] bg-white px-3 py-2"
             type="number"
@@ -169,6 +196,16 @@ export default function VideosPage() {
             step={0.01}
             value={cost}
             onChange={(e) => setCost(Number(e.target.value))}
+          />
+        </label>
+        <label className="text-sm font-semibold">
+          Iteration
+          <input
+            className="mt-1 w-full rounded-xl border border-[var(--border)] bg-white px-3 py-2"
+            type="number"
+            min={0}
+            value={iteration}
+            onChange={(e) => setIteration(Number(e.target.value))}
           />
         </label>
         <button
@@ -188,10 +225,13 @@ export default function VideosPage() {
           <thead className="text-[var(--muted)]">
             <tr>
               <th className="py-2 pr-3">Name</th>
+              <th className="py-2 pr-3">Video ID</th>
               <th className="py-2 pr-3">Task</th>
               <th className="py-2 pr-3">Type</th>
               <th className="py-2 pr-3">Model</th>
               <th className="py-2 pr-3">Iter</th>
+              <th className="py-2 pr-3">Cost</th>
+              <th className="py-2 pr-3">S3 / path</th>
               <th className="py-2 pr-3"></th>
             </tr>
           </thead>
@@ -199,12 +239,20 @@ export default function VideosPage() {
             {videos.map((v) => (
               <tr key={v.video_id} className="border-t border-[var(--border)]">
                 <td className="py-2 pr-3 font-semibold">{v.original_name}</td>
-                <td className="py-2 pr-3">{v.task_id.slice(0, 8)}</td>
+                <td className="py-2 pr-3 font-mono text-xs">{v.video_id}</td>
+                <td className="py-2 pr-3">{taskLabel(v.task_id)}</td>
                 <td className="py-2 pr-3">{v.is_gold ? "Gold" : "Model"}</td>
                 <td className="py-2 pr-3">
                   {models.find((m) => m.id === v.model_id)?.display_name ?? "—"}
                 </td>
                 <td className="py-2 pr-3">{v.iteration}</td>
+                <td className="py-2 pr-3">${Number(v.cost_usd || 0).toFixed(2)}</td>
+                <td
+                  className="max-w-[220px] truncate py-2 pr-3 font-mono text-xs"
+                  title={v.media_path}
+                >
+                  {v.media_path}
+                </td>
                 <td className="py-2 pr-3">
                   <button
                     type="button"
@@ -216,6 +264,13 @@ export default function VideosPage() {
                 </td>
               </tr>
             ))}
+            {!videos.length ? (
+              <tr>
+                <td colSpan={9} className="py-4 text-[var(--muted)]">
+                  No videos yet. Upload above or Refresh from S3.
+                </td>
+              </tr>
+            ) : null}
           </tbody>
         </table>
       </div>

@@ -19,9 +19,15 @@ import { randomUUID } from "crypto";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const require = createRequire(import.meta.url);
 
-// Resolve better-sqlite3 from human/ui
+# Resolve better-sqlite3 from human/ui when available; otherwise expect DATABASE sync via Admin Refresh.
 const uiRoot = path.resolve(__dirname, "../ui");
-const Database = require(path.join(uiRoot, "node_modules/better-sqlite3"));
+let Database;
+try {
+  Database = require(path.join(uiRoot, "node_modules/better-sqlite3"));
+} catch {
+  console.error("Run from an environment with human/ui deps, or use Admin → Refresh from S3.");
+  process.exit(1);
+}
 
 const dataDir = process.env.DATA_DIR
   ? path.resolve(process.env.DATA_DIR)

@@ -104,5 +104,19 @@ with open(path, "w") as f:
     json.dump(manifest, f, indent=2)
     f.write("\n")
 subprocess.check_call(["aws", "s3", "cp", path, f"s3://{bucket}/manifest.json", "--content-type", "application/json"])
-print(json.dumps({"ok": True, "video_id": entry["video_id"], "key": entry["key"], "media_path": f"s3://{bucket}/{entry['key']}"}, indent=2))
+
+# Required sidecar next to the video
+meta_key = entry["key"].rsplit(".", 1)[0] + ".meta.json"
+meta_path = "/tmp/gdpval-meta.json"
+with open(meta_path, "w") as f:
+    json.dump(entry, f, indent=2)
+    f.write("\n")
+subprocess.check_call(["aws", "s3", "cp", meta_path, f"s3://{bucket}/{meta_key}", "--content-type", "application/json"])
+print(json.dumps({
+  "ok": True,
+  "video_id": entry["video_id"],
+  "key": entry["key"],
+  "meta_key": meta_key,
+  "media_path": f"s3://{bucket}/{entry['key']}"
+}, indent=2))
 PY

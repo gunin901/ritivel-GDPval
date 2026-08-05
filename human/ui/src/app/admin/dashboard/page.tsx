@@ -62,9 +62,14 @@ export default function AdminDashboardPage() {
           href="/api/admin/export"
           className="rounded-xl border border-[var(--border)] px-4 py-2.5 text-sm font-semibold text-violet-900 hover:bg-[var(--surface)]"
         >
-          Export ratings
+          Export participant × task × comparison
         </a>
       </div>
+      <p className="text-sm text-[var(--muted)]">
+        Export is NDJSON with one row per comparison: participant, task, model
+        video (id, model, cost, iteration), gold video, and rating fields when
+        submitted.
+      </p>
 
       <section>
         <h2 className="text-xl font-bold text-violet-950">Win rates</h2>

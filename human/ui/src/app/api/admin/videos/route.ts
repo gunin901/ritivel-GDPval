@@ -62,6 +62,7 @@ export async function POST(req: Request) {
       isGold: is_gold,
       modelId: model_id,
       iteration,
+      costUsd: cost_usd,
     }
   );
   const db = getDb();
