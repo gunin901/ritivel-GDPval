@@ -16,8 +16,11 @@ export default async function GradeLayout({
 }: {
   children: React.ReactNode;
 }) {
+  const raw = await getSession();
+  if (!raw.participantId) redirect("/login");
   const session = await requireAuth();
-  if (!session) redirect("/login");
+  // Stale cookie after DB reset — clear it in a Route Handler, not RSC.
+  if (!session) redirect("/api/auth/logout");
   if (session.isAdmin) redirect("/admin");
 
   return (

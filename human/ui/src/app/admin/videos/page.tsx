@@ -89,7 +89,10 @@ export default function VideosPage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Sync failed");
       setMsg(
-        `S3 refresh: scanned ${data.scanned}, inserted ${data.inserted}, updated ${data.updated}, new comparisons ${data.assigned}`
+        `S3 refresh: scanned ${data.scanned}, inserted ${data.inserted}, updated ${data.updated}, new comparisons ${data.assigned}` +
+          (data.deactivated_local
+            ? `, deactivated ${data.deactivated_local} local`
+            : "")
       );
       load();
     } catch (e) {

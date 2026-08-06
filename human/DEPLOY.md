@@ -114,7 +114,7 @@ Bulk upload one file:
 ```bash
 ./upload-video.sh --task e222075d-5d62-4757-ae3c-e34b0846583b --gold --file ./gold.mp4
 ./upload-video.sh --task e222075d-5d62-4757-ae3c-e34b0846583b \
-  --model 00000000-0000-4000-8000-0000000000a1 --iter 0 --file ./sample.mp4
+  --model a1000000-0005-4000-8000-000000000002 --seed 0 --file ./sample.mp4
 ```
 
 ## 4. Fast buffering

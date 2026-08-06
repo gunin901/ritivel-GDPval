@@ -2,8 +2,13 @@ import fs from "fs";
 import path from "path";
 import { randomBytes, randomUUID } from "crypto";
 import type Database from "better-sqlite3";
-import { HARDCODED_MODELS, HARDCODED_MODEL_IDS } from "./constants";
+import {
+  HARDCODED_MODELS,
+  HARDCODED_MODEL_IDS,
+  LEGACY_MODEL_ID_REMAP,
+} from "./constants";
 import { dataDir } from "./paths";
+import { bundledVideoCatalog } from "./s3-catalog";
 
 const TASK_ID = "e222075d-5d62-4757-ae3c-e34b0846583b";
 const GOLD_VIDEO_ID = "00000000-0000-4000-8000-000000000001";
@@ -16,7 +21,6 @@ const SAMPLE_MODEL_IDS = [
   MODEL_VIDEO_ID_3,
 ] as const;
 const SAMPLE_MODEL_ID = HARDCODED_MODELS[0].id;
-const LEGACY_SAMPLE_MODEL_ID = "00000000-0000-4000-8000-0000000000aa";
 
 function nowIso() {
   return new Date().toISOString();
@@ -161,6 +165,14 @@ export function seedIfNeeded(db: Database.Database) {
       updateModel.run(model.display_name, model.id);
     }
   }
+  // Remap pre-S3 placeholder model IDs onto canonical blinded UUIDs
+  const remapVideo = db.prepare(
+    "UPDATE videos SET model_id = ? WHERE model_id = ?"
+  );
+  for (const [from, to] of Object.entries(LEGACY_MODEL_ID_REMAP)) {
+    remapVideo.run(to, from);
+  }
+
   const allModels = db
     .prepare("SELECT id FROM models")
     .all() as { id: string }[];
@@ -169,14 +181,16 @@ export function seedIfNeeded(db: Database.Database) {
     if (!HARDCODED_MODEL_IDS.has(row.id)) deactivate.run(row.id);
   }
 
-  // Remap legacy sample-model videos onto the first hardcoded model
-  db.prepare("UPDATE videos SET model_id = ? WHERE model_id = ?").run(
-    SAMPLE_MODEL_ID,
-    LEGACY_SAMPLE_MODEL_ID
-  );
+  // When media is on S3, register the upload-run inventory so admin + new
+  // graders see videos without waiting for a manual Refresh.
+  seedBundledS3Catalog(db);
 
   const { gold: goldSrc, model: modelSrc } = sampleVideoSources();
-  if (fs.existsSync(goldSrc) && fs.existsSync(modelSrc)) {
+  if (
+    process.env.MEDIA_BACKEND !== "s3" &&
+    fs.existsSync(goldSrc) &&
+    fs.existsSync(modelSrc)
+  ) {
     const goldExists = db
       .prepare("SELECT video_id FROM videos WHERE video_id = ?")
       .get(GOLD_VIDEO_ID);
@@ -237,6 +251,68 @@ export function seedIfNeeded(db: Database.Database) {
       }
     }
   }
+}
+
+/** Upsert video rows from bundled video_ids.json when MEDIA_BACKEND=s3. */
+function seedBundledS3Catalog(db: Database.Database) {
+  if (process.env.MEDIA_BACKEND !== "s3") return;
+  const bucket = process.env.S3_BUCKET;
+  if (!bucket) return;
+
+  const select = db.prepare("SELECT video_id FROM videos WHERE video_id = ?");
+  const insert = db.prepare(`
+    INSERT INTO videos
+      (video_id, task_id, is_gold, model_id, cost_usd, seed, original_name, media_path, active, created_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, ?)
+  `);
+  const update = db.prepare(`
+    UPDATE videos SET
+      task_id = ?,
+      is_gold = ?,
+      model_id = ?,
+      cost_usd = ?,
+      seed = ?,
+      original_name = ?,
+      media_path = ?,
+      active = 1
+    WHERE video_id = ?
+  `);
+
+  const tx = db.transaction(() => {
+    for (const v of bundledVideoCatalog()) {
+      const mediaPath = `s3://${bucket}/${v.key.replace(/^\//, "")}`;
+      if (select.get(v.video_id)) {
+        update.run(
+          v.task_id,
+          v.is_gold ? 1 : 0,
+          v.is_gold ? null : v.model_id,
+          Number(v.cost_usd || 0),
+          Number(v.seed || 0),
+          v.original_name,
+          mediaPath,
+          v.video_id
+        );
+      } else {
+        insert.run(
+          v.video_id,
+          v.task_id,
+          v.is_gold ? 1 : 0,
+          v.is_gold ? null : v.model_id,
+          Number(v.cost_usd || 0),
+          Number(v.seed || 0),
+          v.original_name,
+          mediaPath,
+          nowIso()
+        );
+      }
+    }
+    // Prefer S3 inventory over any leftover local seed placeholders.
+    db.prepare(
+      `UPDATE videos SET active = 0
+       WHERE active = 1 AND media_path NOT LIKE 's3://%'`
+    ).run();
+  });
+  tx();
 }
 
 export {

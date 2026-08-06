@@ -16,8 +16,11 @@ export default async function AdminLayout({
 }: {
   children: React.ReactNode;
 }) {
+  const raw = await getSession();
+  if (!raw.participantId) redirect("/login");
   const session = await requireAdmin();
-  if (!session) redirect("/login");
+  // Stale cookie after DB reset — clear it in a Route Handler, not RSC.
+  if (!session) redirect("/api/auth/logout");
 
   return (
     <div className="min-h-screen p-3 md:p-5">

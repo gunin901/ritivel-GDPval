@@ -5,24 +5,24 @@
   "region": "us-west-2",
   "videos": [
     {
-      "video_id": "11111111-1111-4111-8111-111111111101",
+      "video_id": "b1000000-e222-4000-8000-000000000001",
       "task_id": "e222075d-5d62-4757-ae3c-e34b0846583b",
       "is_gold": true,
       "model_id": null,
       "seed": 0,
       "cost_usd": 0,
-      "original_name": "gold-green-energy.mp4",
-      "key": "media/tasks/e222075d-5d62-4757-ae3c-e34b0846583b/gold/11111111-1111-4111-8111-111111111101.mp4"
+      "original_name": "GreenEnergy_v1.mp4",
+      "key": "media/tasks/e222075d-5d62-4757-ae3c-e34b0846583b/gold/b1000000-e222-4000-8000-000000000001.mp4"
     },
     {
-      "video_id": "22222222-2222-4222-8222-222222222201",
+      "video_id": "f48babc3-889c-5390-ae9f-3f4d8677634e",
       "task_id": "e222075d-5d62-4757-ae3c-e34b0846583b",
       "is_gold": false,
-      "model_id": "00000000-0000-4000-8000-0000000000a1",
+      "model_id": "a1000000-5b56-4000-8000-000000000001",
       "seed": 0,
-      "cost_usd": 0,
-      "original_name": "gpt-5-seed0.mp4",
-      "key": "media/tasks/e222075d-5d62-4757-ae3c-e34b0846583b/models/00000000-0000-4000-8000-0000000000a1/seed-0/22222222-2222-4222-8222-222222222201.mp4"
+      "cost_usd": 8.982702,
+      "original_name": "Support_Green_Energy_30.mp4",
+      "key": "media/tasks/e222075d-5d62-4757-ae3c-e34b0846583b/models/a1000000-5b56-4000-8000-000000000001/iter-0/f48babc3-889c-5390-ae9f-3f4d8677634e.mp4"
     }
   ]
 }

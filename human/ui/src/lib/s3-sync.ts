@@ -1,5 +1,7 @@
 import { getDb, nowIso } from "./db";
 import { assignNewVideosToGraders } from "./assignments";
+import { HARDCODED_MODEL_IDS } from "./constants";
+import { mergeVideoCatalog } from "./s3-catalog";
 import {
   loadAllVideoMetasFromS3,
   mediaBackend,
@@ -15,12 +17,14 @@ export type SyncResult = {
   updated: number;
   skipped: number;
   assigned: number;
+  deactivated_local: number;
   videos: VideoMeta[];
 };
 
 /**
- * Pull video + metadata from S3 into SQLite, then ensure every active
- * non-admin grader has comparisons for new model samples vs task gold.
+ * Pull video + metadata from S3 (+ bundled video_ids catalog) into SQLite,
+ * then ensure every active non-admin grader has comparisons for new model
+ * samples vs task gold.
  */
 export async function syncVideosFromS3(): Promise<SyncResult> {
   if (mediaBackend() !== "s3") {
@@ -31,12 +35,13 @@ export async function syncVideosFromS3(): Promise<SyncResult> {
       updated: 0,
       skipped: 0,
       assigned: 0,
+      deactivated_local: 0,
       videos: [],
     };
   }
 
   const bucket = s3Bucket();
-  const metas = await loadAllVideoMetasFromS3();
+  const metas = mergeVideoCatalog(await loadAllVideoMetasFromS3());
   const db = getDb();
 
   const select = db.prepare("SELECT video_id FROM videos WHERE video_id = ?");
@@ -65,6 +70,11 @@ export async function syncVideosFromS3(): Promise<SyncResult> {
   const tx = db.transaction(() => {
     for (const v of metas) {
       if (!v.video_id || !v.task_id || !v.key) {
+        skipped++;
+        continue;
+      }
+      // Gold has null model_id; model samples need a known roster id (FK).
+      if (!v.is_gold && (!v.model_id || !HARDCODED_MODEL_IDS.has(v.model_id))) {
         skipped++;
         continue;
       }
@@ -100,6 +110,14 @@ export async function syncVideosFromS3(): Promise<SyncResult> {
   });
   tx();
 
+  // Hide local FS seed placeholders once S3 inventory is live.
+  const deactivated_local = db
+    .prepare(
+      `UPDATE videos SET active = 0
+       WHERE active = 1 AND media_path NOT LIKE 's3://%'`
+    )
+    .run().changes;
+
   const assigned = assignNewVideosToGraders();
 
   return {
@@ -110,6 +128,7 @@ export async function syncVideosFromS3(): Promise<SyncResult> {
     updated,
     skipped,
     assigned,
+    deactivated_local,
     videos: metas,
   };
 }

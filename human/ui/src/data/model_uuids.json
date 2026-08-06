@@ -1,0 +1,54 @@
+{
+  "comment": "Stable blinded model UUIDs for the grading UI / S3 layout. Do not rename IDs after upload.",
+  "run_id": "full-20260805T134503Z",
+  "skipped_models": ["claude-opus-4.1"],
+  "models": {
+    "gpt-5.6-sol": {
+      "model_uuid": "a1000000-5b56-4000-8000-000000000001",
+      "display_name": "gpt-5.6-sol",
+      "provider": "openai"
+    },
+    "gpt-5": {
+      "model_uuid": "a1000000-0005-4000-8000-000000000002",
+      "display_name": "gpt-5",
+      "provider": "openai"
+    },
+    "claude-opus-5": {
+      "model_uuid": "a1000000-0c05-4000-8000-000000000003",
+      "display_name": "claude-opus-5",
+      "provider": "anthropic"
+    },
+    "gemini-3.1-pro": {
+      "model_uuid": "a1000000-0310-4000-8000-000000000004",
+      "display_name": "gemini-3.1-pro",
+      "provider": "google"
+    },
+    "gemini-2.5-pro": {
+      "model_uuid": "a1000000-0250-4000-8000-000000000005",
+      "display_name": "gemini-2.5-pro",
+      "provider": "google"
+    },
+    "grok-4.5": {
+      "model_uuid": "a1000000-0045-4000-8000-000000000006",
+      "display_name": "grok-4.5",
+      "provider": "xai"
+    },
+    "grok-4": {
+      "model_uuid": "a1000000-0004-4000-8000-000000000007",
+      "display_name": "grok-4",
+      "provider": "xai"
+    }
+  },
+  "tasks": {
+    "e222075d-5d62-4757-ae3c-e34b0846583b": {
+      "name": "green_energy",
+      "gold_local": "media/e222075d-5d62-4757-ae3c-e34b0846583b/deliverable/GreenEnergy_v1.mp4",
+      "gold_video_id": "b1000000-e222-4000-8000-000000000001"
+    },
+    "75401f7c-396d-406d-b08e-938874ad1045": {
+      "name": "goodsin",
+      "gold_local": "media/75401f7c-396d-406d-b08e-938874ad1045/deliverable/Goodsin Studios CG Reel 2025.mp4",
+      "gold_video_id": "b1000000-7540-4000-8000-000000000002"
+    }
+  }
+}

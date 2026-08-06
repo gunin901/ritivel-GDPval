@@ -62,14 +62,14 @@ Legacy `iter-{n}` folders and `iteration` meta fields are still accepted on sync
 
 ```json
 {
-  "video_id": "22222222-2222-4222-8222-222222222201",
+  "video_id": "f48babc3-889c-5390-ae9f-3f4d8677634e",
   "task_id": "e222075d-5d62-4757-ae3c-e34b0846583b",
   "is_gold": false,
-  "model_id": "00000000-0000-4000-8000-0000000000a1",
+  "model_id": "a1000000-5b56-4000-8000-000000000001",
   "seed": 0,
-  "cost_usd": 0,
-  "original_name": "gpt-5-sample.mp4",
-  "key": "media/tasks/e222075d-5d62-4757-ae3c-e34b0846583b/models/00000000-0000-4000-8000-0000000000a1/seed-0/22222222-2222-4222-8222-222222222201.mp4"
+  "cost_usd": 8.982702,
+  "original_name": "Support_Green_Energy_30.mp4",
+  "key": "media/tasks/e222075d-5d62-4757-ae3c-e34b0846583b/models/a1000000-5b56-4000-8000-000000000001/iter-0/f48babc3-889c-5390-ae9f-3f4d8677634e.mp4"
 }
 ```
 
@@ -77,14 +77,14 @@ Gold example:
 
 ```json
 {
-  "video_id": "11111111-1111-4111-8111-111111111101",
+  "video_id": "b1000000-e222-4000-8000-000000000001",
   "task_id": "e222075d-5d62-4757-ae3c-e34b0846583b",
   "is_gold": true,
   "model_id": null,
   "seed": 0,
   "cost_usd": 0,
-  "original_name": "gold-green-energy.mp4",
-  "key": "media/tasks/e222075d-5d62-4757-ae3c-e34b0846583b/gold/11111111-1111-4111-8111-111111111101.mp4"
+  "original_name": "GreenEnergy_v1.mp4",
+  "key": "media/tasks/e222075d-5d62-4757-ae3c-e34b0846583b/gold/b1000000-e222-4000-8000-000000000001.mp4"
 }
 ```
 
@@ -114,15 +114,24 @@ Admin uploads write **both** the video object and this sidecar, and update root 
 
 ## Allowed model IDs
 
-| model_id | Display name |
+Canonical blinded UUIDs from `model_uuids.json` (do not rename after upload):
+
+| model_id | Slug | Display name |
+|---|---|---|
+| `a1000000-5b56-4000-8000-000000000001` | gpt-5.6-sol | GPT-5.6-Sol |
+| `a1000000-0005-4000-8000-000000000002` | gpt-5 | GPT-5 |
+| `a1000000-0c05-4000-8000-000000000003` | claude-opus-5 | Claude Opus 5 |
+| `a1000000-0310-4000-8000-000000000004` | gemini-3.1-pro | Gemini 3.1 Pro |
+| `a1000000-0250-4000-8000-000000000005` | gemini-2.5-pro | Gemini 2.5 Pro |
+| `a1000000-0045-4000-8000-000000000006` | grok-4.5 | Grok 4.5 |
+| `a1000000-0004-4000-8000-000000000007` | grok-4 | Grok 4 |
+
+Gold video IDs (from the same upload run):
+
+| task_id | gold video_id |
 |---|---|
-| `00000000-0000-4000-8000-0000000000a1` | GPT-5 — high reasoning |
-| `00000000-0000-4000-8000-0000000000a3` | Gemini 2.5 Pro |
-| `00000000-0000-4000-8000-0000000000a4` | Grok 4 |
-| `00000000-0000-4000-8000-0000000000a5` | GPT-5.6-Sol |
-| `00000000-0000-4000-8000-0000000000a6` | Opus-5 |
-| `00000000-0000-4000-8000-0000000000a7` | Gemini-3.1-pro |
-| `00000000-0000-4000-8000-0000000000a8` | Grok-4.5 |
+| `e222075d-5d62-4757-ae3c-e34b0846583b` | `b1000000-e222-4000-8000-000000000001` |
+| `75401f7c-396d-406d-b08e-938874ad1045` | `b1000000-7540-4000-8000-000000000002` |
 
 ---
 

@@ -11,23 +11,12 @@ export async function getSession() {
 }
 
 /**
- * Cookie writes are only allowed in Route Handlers / Server Actions.
- * In RSC (layouts/pages) we keep in-memory session fields for this request
- * but must not crash if Next rejects the cookie mutation.
+ * Resolve the logged-in participant from SQLite.
+ *
+ * IMPORTANT: this must stay read-only. Layouts/pages are Server Components and
+ * Next.js forbids cookie writes there. Stale cookies (e.g. after a DB reset)
+ * are cleared by redirecting to `/api/auth/logout` (a Route Handler).
  */
-async function tryPersistSession(
-  write: () => void | Promise<void>
-): Promise<void> {
-  try {
-    await write();
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
-    if (msg.includes("Cookies can only be modified")) return;
-    throw err;
-  }
-}
-
-/** Load participant from DB; clears stale sessions when possible. */
 export async function resolveParticipant(): Promise<{
   session: Awaited<ReturnType<typeof getSession>>;
   user: ParticipantRow;
@@ -40,24 +29,12 @@ export async function resolveParticipant(): Promise<{
     .prepare("SELECT * FROM participants WHERE id = ? AND active = 1")
     .get(session.participantId) as ParticipantRow | undefined;
 
-  if (!user) {
-    await tryPersistSession(() => {
-      session.destroy();
-    });
-    return null;
-  }
+  if (!user) return null;
 
-  const isAdmin = !!user.is_admin;
-  if (
-    session.isAdmin !== isAdmin ||
-    session.email !== user.email ||
-    session.name !== user.display_name
-  ) {
-    session.isAdmin = isAdmin;
-    session.email = user.email;
-    session.name = user.display_name;
-    await tryPersistSession(() => session.save());
-  }
+  // Keep request-local fields in sync for UI; do not persist cookies here.
+  session.isAdmin = !!user.is_admin;
+  session.email = user.email;
+  session.name = user.display_name;
 
   return { session, user };
 }

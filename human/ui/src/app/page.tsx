@@ -1,11 +1,13 @@
 import { redirect } from "next/navigation";
-import { getSession } from "@/lib/auth";
+import { getSession, resolveParticipant } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
 export default async function HomePage() {
-  const session = await getSession();
-  if (!session.participantId) redirect("/login");
-  if (session.isAdmin) redirect("/admin");
+  const raw = await getSession();
+  if (!raw.participantId) redirect("/login");
+  const resolved = await resolveParticipant();
+  if (!resolved) redirect("/api/auth/logout");
+  if (resolved.session.isAdmin) redirect("/admin");
   redirect("/grade");
 }
