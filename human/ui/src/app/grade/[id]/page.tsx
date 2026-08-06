@@ -18,6 +18,19 @@ type Detail = {
   progress: { index: number; total: number; remaining: number };
 };
 
+type RefAsset = {
+  id: string;
+  label: string;
+  kind: string;
+  url: string | null;
+};
+
+type TaskRefs = {
+  highlights: RefAsset[];
+  gallery: RefAsset[];
+  galleryPath: string | null;
+};
+
 function StreamPlayer({
   label,
   src,
@@ -78,6 +91,7 @@ export default function GradeDetailPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
   const [detail, setDetail] = useState<Detail | null>(null);
+  const [refs, setRefs] = useState<TaskRefs | null>(null);
   const [error, setError] = useState("");
   const [choice, setChoice] = useState<"a" | "tie" | "b" | "">("");
   const [justification, setJustification] = useState("");
@@ -94,6 +108,21 @@ export default function GradeDetailPage() {
       })
       .catch((e: Error) => setError(e.message));
   }, [id]);
+
+  useEffect(() => {
+    if (!detail?.task.id) return;
+    fetch(`/api/tasks/${detail.task.id}/references`)
+      .then(async (r) => {
+        const data = await r.json();
+        if (!r.ok) return;
+        setRefs({
+          highlights: data.highlights || [],
+          gallery: data.gallery || [],
+          galleryPath: data.galleryPath || null,
+        });
+      })
+      .catch(() => {});
+  }, [detail?.task.id]);
 
   const words = useMemo(() => wordCount(justification), [justification]);
 
@@ -150,6 +179,35 @@ export default function GradeDetailPage() {
         <pre className="mt-3 max-h-64 overflow-auto whitespace-pre-wrap text-sm text-violet-800">
           {detail.task.prompt}
         </pre>
+        {refs && (refs.highlights.length > 0 || refs.galleryPath) ? (
+          <div className="mt-4 flex flex-wrap gap-2 border-t border-[var(--border)] pt-4">
+            {refs.highlights.map((h) =>
+              h.url ? (
+                <a
+                  key={h.id}
+                  href={h.url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="rounded-xl bg-[var(--accent)] px-4 py-2.5 text-sm font-bold text-white"
+                >
+                  {h.kind === "pdf"
+                    ? `Open ${h.label}`
+                    : h.kind === "zip"
+                      ? `Download ${h.label}`
+                      : h.label}
+                </a>
+              ) : null
+            )}
+            {refs.galleryPath ? (
+              <a
+                href={refs.galleryPath}
+                className="rounded-xl border border-[var(--border)] bg-white px-4 py-2.5 text-sm font-bold text-violet-900 hover:bg-[var(--surface)]"
+              >
+                Browse all reel clips
+              </a>
+            ) : null}
+          </div>
+        ) : null}
       </details>
 
       <div className="grid gap-4 lg:grid-cols-2">

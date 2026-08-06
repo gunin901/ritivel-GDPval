@@ -31,12 +31,15 @@ export async function GET() {
     taskId: r.task_id,
     videoIdModel: r.video_id_model,
   }));
-  const winRates = computeWinRates(winInputs).map((w) => {
-    const model = db
-      .prepare("SELECT display_name FROM models WHERE id = ?")
-      .get(w.modelId) as { display_name: string } | undefined;
-    return { ...w, modelName: model?.display_name ?? w.modelId.slice(0, 8) };
-  });
+  // Dashboard shows model totals only (same grain as Elo), not per-task rows.
+  const winRates = computeWinRates(winInputs)
+    .filter((w) => w.taskId === "all")
+    .map((w) => {
+      const model = db
+        .prepare("SELECT display_name FROM models WHERE id = ?")
+        .get(w.modelId) as { display_name: string } | undefined;
+      return { ...w, modelName: model?.display_name ?? w.modelId.slice(0, 8) };
+    });
 
   const elo = computeElo(
     ratingRows.map((r) => ({

@@ -287,14 +287,26 @@ export async function createPlaybackUrl(
 ): Promise<string | null> {
   const parsed = parseS3Path(storedPath);
   if (!parsed) return null;
+  return createSignedUrlForKey(parsed.key, { disposition: "inline" });
+}
 
+/** Sign an object key in the configured bucket. */
+export async function createSignedUrlForKey(
+  key: string,
+  opts?: { disposition?: "inline" | "attachment"; filename?: string }
+): Promise<string | null> {
+  if (mediaBackend() !== "s3") return null;
   const client = s3Client();
+  const disposition = opts?.disposition || "inline";
+  const filename = opts?.filename
+    ? `; filename="${opts.filename.replace(/"/g, "")}"`
+    : "";
   return getSignedUrl(
     client,
     new GetObjectCommand({
-      Bucket: parsed.bucket,
-      Key: parsed.key,
-      ResponseContentDisposition: "inline",
+      Bucket: s3Bucket(),
+      Key: key.replace(/^\//, ""),
+      ResponseContentDisposition: `${disposition}${filename}`,
     }),
     { expiresIn: signedUrlTtl() }
   );

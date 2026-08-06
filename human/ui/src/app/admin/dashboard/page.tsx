@@ -78,7 +78,6 @@ export default function AdminDashboardPage() {
             <thead className="text-[var(--muted)]">
               <tr>
                 <th className="py-2 pr-4">Model</th>
-                <th className="py-2 pr-4">Task</th>
                 <th className="py-2 pr-4">N</th>
                 <th className="py-2 pr-4">Paper</th>
                 <th className="py-2 pr-4">Wins-only</th>
@@ -88,11 +87,10 @@ export default function AdminDashboardPage() {
             <tbody>
               {data.winRates.map((w) => (
                 <tr
-                  key={`${w.modelId}-${w.taskId}`}
+                  key={w.modelId}
                   className="border-t border-[var(--border)]"
                 >
                   <td className="py-2 pr-4 font-semibold">{w.modelName}</td>
-                  <td className="py-2 pr-4">{w.taskId === "all" ? "All" : w.taskId.slice(0, 8)}</td>
                   <td className="py-2 pr-4">{w.n}</td>
                   <td className="py-2 pr-4">{(w.win_rate_paper * 100).toFixed(1)}%</td>
                   <td className="py-2 pr-4">{(w.win_rate_wins_only * 100).toFixed(1)}%</td>
@@ -101,7 +99,7 @@ export default function AdminDashboardPage() {
               ))}
               {!data.winRates.length ? (
                 <tr>
-                  <td colSpan={6} className="py-4 text-[var(--muted)]">
+                  <td colSpan={5} className="py-4 text-[var(--muted)]">
                     No ratings yet.
                   </td>
                 </tr>
