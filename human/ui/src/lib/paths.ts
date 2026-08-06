@@ -1,12 +1,51 @@
 import path from "path";
 import fs from "fs";
 
-/** Persistent data root. Override with DATA_DIR (Render disk) or defaults to human/data. */
+let _loggedPersistence = false;
+
+/**
+ * Persistent data root for SQLite (+ optional local media).
+ * On Render this MUST be a disk mount (DATA_DIR=/var/data).
+ */
 export function dataDir(): string {
-  const dir = process.env.DATA_DIR
-    ? path.resolve(process.env.DATA_DIR)
+  const fromEnv = process.env.DATA_DIR?.trim();
+  const dir = fromEnv
+    ? path.resolve(fromEnv)
     : path.resolve(process.cwd(), "..", "data");
+
+  if (process.env.NODE_ENV === "production" && !fromEnv) {
+    console.error(
+      "[data] FATAL: DATA_DIR is unset in production. " +
+        "SQLite would be written to the ephemeral filesystem and wiped on every deploy. " +
+        "Set DATA_DIR=/var/data and attach a Render persistent disk at that path."
+    );
+    throw new Error("DATA_DIR is required in production");
+  }
+
   fs.mkdirSync(path.join(dir, "media"), { recursive: true });
+
+  if (!_loggedPersistence) {
+    _loggedPersistence = true;
+    const db = path.join(dir, "eval.db");
+    const marker = path.join(dir, ".persistence-marker");
+    let existed = false;
+    try {
+      existed = fs.existsSync(marker);
+      if (!existed) {
+        fs.writeFileSync(
+          marker,
+          `created=${new Date().toISOString()}\npath=${dir}\n`
+        );
+      }
+    } catch (err) {
+      console.error("[data] failed to write persistence marker", err);
+    }
+    console.log(
+      `[data] DATA_DIR=${dir} eval.db=${db} ` +
+        `db_exists=${fs.existsSync(db)} persistence_marker=${existed ? "reused" : "created"}`
+    );
+  }
+
   return dir;
 }
 
@@ -44,7 +83,9 @@ export function mimeForPath(filePath: string): string {
 }
 
 export function mimeForExt(ext: string): string {
-  const e = ext.toLowerCase().startsWith(".") ? ext.toLowerCase() : `.${ext.toLowerCase()}`;
+  const e = ext.toLowerCase().startsWith(".")
+    ? ext.toLowerCase()
+    : `.${ext.toLowerCase()}`;
   if (e === ".mov") return "video/quicktime";
   if (e === ".webm") return "video/webm";
   return "video/mp4";

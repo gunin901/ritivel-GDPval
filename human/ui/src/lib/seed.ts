@@ -52,77 +52,17 @@ function resolveSeededMedia(videoId: string, fallbackExt: string): string {
   return path.join(dir, `${videoId}${fallbackExt}`);
 }
 
-/** Ensure bootstrap admin + sample gold/model videos exist. */
+/** Ensure bootstrap admin + sample gold/model videos exist. Never wipe existing data. */
 export function seedIfNeeded(db: Database.Database) {
+  // Schema is owned by migrate() in db.ts. Do not DROP tables here.
   try {
     db.prepare("SELECT email FROM participants LIMIT 1").get();
-  } catch {
-    db.exec(`
-      DROP TABLE IF EXISTS ratings;
-      DROP TABLE IF EXISTS comparisons;
-      DROP TABLE IF EXISTS videos;
-      DROP TABLE IF EXISTS participants;
-      DROP TABLE IF EXISTS models;
-      DROP TABLE IF EXISTS participants_v2;
-    `);
-    db.exec(`
-      CREATE TABLE IF NOT EXISTS models (
-        id TEXT PRIMARY KEY,
-        display_name TEXT NOT NULL,
-        active INTEGER NOT NULL DEFAULT 1,
-        created_at TEXT NOT NULL
-      );
-      CREATE TABLE IF NOT EXISTS participants (
-        id TEXT PRIMARY KEY,
-        display_name TEXT NOT NULL,
-        email TEXT NOT NULL UNIQUE,
-        passkey TEXT NOT NULL UNIQUE,
-        is_admin INTEGER NOT NULL DEFAULT 0,
-        active INTEGER NOT NULL DEFAULT 1,
-        created_at TEXT NOT NULL
-      );
-      CREATE TABLE IF NOT EXISTS videos (
-        video_id TEXT PRIMARY KEY,
-        task_id TEXT NOT NULL,
-        is_gold INTEGER NOT NULL DEFAULT 0,
-        model_id TEXT,
-        cost_usd REAL NOT NULL DEFAULT 0,
-        seed INTEGER NOT NULL DEFAULT 0,
-        original_name TEXT NOT NULL,
-        media_path TEXT NOT NULL,
-        active INTEGER NOT NULL DEFAULT 1,
-        created_at TEXT NOT NULL
-      );
-      CREATE TABLE IF NOT EXISTS comparisons (
-        id TEXT PRIMARY KEY,
-        participant_id TEXT NOT NULL,
-        video_id_model TEXT NOT NULL,
-        video_id_gold TEXT NOT NULL,
-        order_shown TEXT NOT NULL,
-        status TEXT NOT NULL DEFAULT 'pending',
-        queue_index INTEGER NOT NULL DEFAULT 0,
-        created_at TEXT NOT NULL,
-        UNIQUE (participant_id, video_id_model)
-      );
-      CREATE TABLE IF NOT EXISTS ratings (
-        id TEXT PRIMARY KEY,
-        comparison_id TEXT NOT NULL UNIQUE,
-        participant_id TEXT NOT NULL,
-        video_id_model TEXT NOT NULL,
-        video_id_gold TEXT NOT NULL,
-        label TEXT NOT NULL,
-        score REAL NOT NULL,
-        failure_tags TEXT NOT NULL,
-        justification TEXT NOT NULL,
-        seconds_spent INTEGER NOT NULL,
-        qc_flag INTEGER NOT NULL DEFAULT 0,
-        submitted_at TEXT NOT NULL
-      );
-      CREATE TABLE IF NOT EXISTS settings (
-        key TEXT PRIMARY KEY,
-        value TEXT NOT NULL
-      );
-    `);
+  } catch (err) {
+    console.error(
+      "[seed] participants table missing/unreadable — refusing to wipe. Run migrate.",
+      err
+    );
+    throw err;
   }
 
   const adminCount = (
@@ -147,6 +87,17 @@ export function seedIfNeeded(db: Database.Database) {
     db.prepare(
       "INSERT OR REPLACE INTO settings (key, value) VALUES ('bootstrap_admin_email', ?)"
     ).run(email);
+  } else {
+    const emailRow = db
+      .prepare(
+        "SELECT value FROM settings WHERE key = 'bootstrap_admin_email'"
+      )
+      .get() as { value: string } | undefined;
+    console.log(
+      `[seed] Existing admin roster intact (${adminCount} admin(s)` +
+        (emailRow?.value ? `; bootstrap email ${emailRow.value}` : "") +
+        ")"
+    );
   }
 
   const insertModel = db.prepare(
