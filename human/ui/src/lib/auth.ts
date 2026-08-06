@@ -10,7 +10,24 @@ export async function getSession() {
   return getIronSession<SessionData>(await cookies(), sessionOptions());
 }
 
-/** Load participant from DB; clears stale sessions. */
+/**
+ * Cookie writes are only allowed in Route Handlers / Server Actions.
+ * In RSC (layouts/pages) we keep in-memory session fields for this request
+ * but must not crash if Next rejects the cookie mutation.
+ */
+async function tryPersistSession(
+  write: () => void | Promise<void>
+): Promise<void> {
+  try {
+    await write();
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    if (msg.includes("Cookies can only be modified")) return;
+    throw err;
+  }
+}
+
+/** Load participant from DB; clears stale sessions when possible. */
 export async function resolveParticipant(): Promise<{
   session: Awaited<ReturnType<typeof getSession>>;
   user: ParticipantRow;
@@ -24,7 +41,9 @@ export async function resolveParticipant(): Promise<{
     .get(session.participantId) as ParticipantRow | undefined;
 
   if (!user) {
-    session.destroy();
+    await tryPersistSession(() => {
+      session.destroy();
+    });
     return null;
   }
 
@@ -37,7 +56,7 @@ export async function resolveParticipant(): Promise<{
     session.isAdmin = isAdmin;
     session.email = user.email;
     session.name = user.display_name;
-    await session.save();
+    await tryPersistSession(() => session.save());
   }
 
   return { session, user };
