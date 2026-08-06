@@ -67,7 +67,7 @@ export default function AdminDashboardPage() {
       </div>
       <p className="text-sm text-[var(--muted)]">
         Export is NDJSON with one row per comparison: participant, task, model
-        video (id, model, cost, iteration), gold video, and rating fields when
+        video (id, model, cost, seed), gold video, and rating fields when
         submitted.
       </p>
 

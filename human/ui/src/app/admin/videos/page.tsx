@@ -9,7 +9,7 @@ type Video = {
   task_id: string;
   is_gold: number;
   model_id: string | null;
-  iteration: number;
+  seed: number;
   original_name: string;
   cost_usd: number;
   media_path: string;
@@ -29,7 +29,7 @@ export default function VideosPage() {
   const [taskId, setTaskId] = useState<string>(TASKS[0]?.id ?? "");
   const [isGold, setIsGold] = useState(false);
   const [modelId, setModelId] = useState("");
-  const [iteration, setIteration] = useState(0);
+  const [seed, setSeed] = useState(0);
   const [cost, setCost] = useState(0);
 
   const load = useCallback(() => {
@@ -62,7 +62,7 @@ export default function VideosPage() {
     fd.set("task_id", taskId);
     fd.set("is_gold", isGold ? "1" : "0");
     if (!isGold) fd.set("model_id", modelId);
-    fd.set("iteration", String(iteration));
+    fd.set("seed", String(seed));
     fd.set("cost_usd", String(cost));
     const res = await fetch("/api/admin/videos", { method: "POST", body: fd });
     const data = await res.json();
@@ -119,7 +119,7 @@ export default function VideosPage() {
           <h1 className="text-3xl font-bold text-violet-950">Videos</h1>
           <p className="mt-1 max-w-2xl text-violet-700">
             Each upload stores the file plus metadata (task, gold/model, cost,
-            iteration) in S3. Click <strong>Refresh from S3</strong> after
+            seed) in S3. Click <strong>Refresh from S3</strong> after
             external uploads so admin + grader queues pick up new comparisons.
           </p>
         </div>
@@ -199,13 +199,13 @@ export default function VideosPage() {
           />
         </label>
         <label className="text-sm font-semibold">
-          Iteration
+          Seed
           <input
             className="mt-1 w-full rounded-xl border border-[var(--border)] bg-white px-3 py-2"
             type="number"
             min={0}
-            value={iteration}
-            onChange={(e) => setIteration(Number(e.target.value))}
+            value={seed}
+            onChange={(e) => setSeed(Number(e.target.value))}
           />
         </label>
         <button
@@ -229,7 +229,7 @@ export default function VideosPage() {
               <th className="py-2 pr-3">Task</th>
               <th className="py-2 pr-3">Type</th>
               <th className="py-2 pr-3">Model</th>
-              <th className="py-2 pr-3">Iter</th>
+              <th className="py-2 pr-3">Seed</th>
               <th className="py-2 pr-3">Cost</th>
               <th className="py-2 pr-3">S3 / path</th>
               <th className="py-2 pr-3"></th>
@@ -245,7 +245,7 @@ export default function VideosPage() {
                 <td className="py-2 pr-3">
                   {models.find((m) => m.id === v.model_id)?.display_name ?? "—"}
                 </td>
-                <td className="py-2 pr-3">{v.iteration}</td>
+                <td className="py-2 pr-3">{v.seed}</td>
                 <td className="py-2 pr-3">${Number(v.cost_usd || 0).toFixed(2)}</td>
                 <td
                   className="max-w-[220px] truncate py-2 pr-3 font-mono text-xs"

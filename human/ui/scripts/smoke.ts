@@ -58,7 +58,7 @@ async function main() {
     fs.writeFileSync(dest, Buffer.from("fake-mp4-bytes"));
     db.prepare(
       `INSERT INTO videos
-        (video_id, task_id, is_gold, model_id, cost_usd, iteration, original_name, media_path, active, created_at)
+        (video_id, task_id, is_gold, model_id, cost_usd, seed, original_name, media_path, active, created_at)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, ?)`
     ).run(
       vid,

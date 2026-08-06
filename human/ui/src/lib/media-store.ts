@@ -26,7 +26,7 @@ export type VideoMeta = {
   is_gold: boolean;
   /** null when gold */
   model_id: string | null;
-  iteration: number;
+  seed: number;
   cost_usd: number;
   original_name: string;
   /** Object key relative to bucket (no s3://) */
@@ -37,9 +37,25 @@ export type VideoObjectMeta = {
   taskId: string;
   isGold: boolean;
   modelId?: string | null;
-  iteration?: number;
+  seed?: number;
   costUsd?: number;
 };
+
+/** Prefer `seed`; accept legacy `iteration` from older sidecars/manifests. */
+export function readSeed(meta: {
+  seed?: number | string | null;
+  iteration?: number | string | null;
+}): number {
+  if (meta.seed != null && meta.seed !== "") {
+    const n = Number(meta.seed);
+    return Number.isFinite(n) ? n : 0;
+  }
+  if (meta.iteration != null && meta.iteration !== "") {
+    const n = Number(meta.iteration);
+    return Number.isFinite(n) ? n : 0;
+  }
+  return 0;
+}
 
 export function mediaBackend(): "fs" | "s3" {
   return process.env.MEDIA_BACKEND === "s3" ? "s3" : "fs";
@@ -75,7 +91,7 @@ export function s3Prefix(): string {
 /**
  * Canonical object key layout (see human/s3/MANIFEST.md):
  *   media/tasks/{taskId}/gold/{videoId}{ext}
- *   media/tasks/{taskId}/models/{modelId}/iter-{n}/{videoId}{ext}
+ *   media/tasks/{taskId}/models/{modelId}/seed-{n}/{videoId}{ext}
  * Sidecar meta:
  *   …/{videoId}.meta.json
  */
@@ -90,8 +106,8 @@ export function buildMediaKey(
     return `${prefix}/tasks/${meta.taskId}/gold/${videoId}${e}`;
   }
   const modelId = meta.modelId || "unknown-model";
-  const iter = Number.isFinite(meta.iteration) ? meta.iteration : 0;
-  return `${prefix}/tasks/${meta.taskId}/models/${modelId}/iter-${iter}/${videoId}${e}`;
+  const seed = Number.isFinite(meta.seed) ? meta.seed : 0;
+  return `${prefix}/tasks/${meta.taskId}/models/${modelId}/seed-${seed}/${videoId}${e}`;
 }
 
 export function metaKeyForMediaKey(mediaKey: string): string {
@@ -128,7 +144,7 @@ export function toVideoMeta(
     task_id: meta.taskId,
     is_gold: !!meta.isGold,
     model_id: meta.isGold ? null : meta.modelId || null,
-    iteration: Number(meta.iteration ?? 0),
+    seed: Number(meta.seed ?? 0),
     cost_usd: Number(meta.costUsd ?? 0),
     original_name: originalName,
     key,
@@ -181,7 +197,7 @@ export async function storeVideoBytes(
           task_id: meta.taskId,
           is_gold: meta.isGold ? "1" : "0",
           model_id: meta.modelId || "",
-          iteration: String(meta.iteration ?? 0),
+          seed: String(meta.seed ?? 0),
           cost_usd: String(meta.costUsd ?? 0),
         },
       },
@@ -354,7 +370,8 @@ export async function listMediaObjectKeys(bucket: string): Promise<string[]> {
 /**
  * Infer meta from key path when sidecar/manifest missing.
  * media/tasks/{task}/gold/{id}.ext
- * media/tasks/{task}/models/{model}/iter-{n}/{id}.ext
+ * media/tasks/{task}/models/{model}/seed-{n}/{id}.ext
+ * (also accepts legacy iter-{n} folders)
  */
 export function inferMetaFromKey(key: string): VideoMeta | null {
   const parts = key.split("/");
@@ -372,7 +389,7 @@ export function inferMetaFromKey(key: string): VideoMeta | null {
       task_id: taskId,
       is_gold: true,
       model_id: null,
-      iteration: 0,
+      seed: 0,
       cost_usd: 0,
       original_name: file,
       key,
@@ -380,20 +397,35 @@ export function inferMetaFromKey(key: string): VideoMeta | null {
   }
   if (base[3] === "models" && base.length >= 7) {
     const modelId = base[4];
-    const iterPart = base[5]; // iter-N
-    const iteration = Number(String(iterPart).replace(/^iter-/, "")) || 0;
+    const seedPart = base[5]; // seed-N or legacy iter-N
+    const seed =
+      Number(String(seedPart).replace(/^(seed|iter)-/, "")) || 0;
     return {
       video_id: videoId,
       task_id: taskId,
       is_gold: false,
       model_id: modelId,
-      iteration,
+      seed,
       cost_usd: 0,
       original_name: file,
       key,
     };
   }
   return null;
+}
+
+function normalizeVideoMeta(raw: Partial<VideoMeta> & { iteration?: number }): VideoMeta | null {
+  if (!raw?.video_id || !raw?.key) return null;
+  return {
+    video_id: raw.video_id,
+    task_id: String(raw.task_id || ""),
+    is_gold: !!raw.is_gold,
+    model_id: raw.is_gold ? null : raw.model_id ?? null,
+    seed: readSeed(raw),
+    cost_usd: Number(raw.cost_usd || 0),
+    original_name: raw.original_name || raw.key.split("/").pop() || raw.video_id,
+    key: raw.key,
+  };
 }
 
 /** Load all VideoMeta from manifest + sidecars + path inference. */
@@ -404,9 +436,12 @@ export async function loadAllVideoMetasFromS3(): Promise<VideoMeta[]> {
   const manifestRaw = await readObjectText(bucket, "manifest.json");
   if (manifestRaw) {
     try {
-      const manifest = JSON.parse(manifestRaw) as { videos?: VideoMeta[] };
+      const manifest = JSON.parse(manifestRaw) as {
+        videos?: Array<Partial<VideoMeta> & { iteration?: number }>;
+      };
       for (const v of manifest.videos || []) {
-        if (v?.video_id && v?.key) byId.set(v.video_id, v);
+        const normalized = normalizeVideoMeta(v);
+        if (normalized) byId.set(normalized.video_id, normalized);
       }
     } catch {
       /* ignore bad manifest */
@@ -419,10 +454,13 @@ export async function loadAllVideoMetasFromS3(): Promise<VideoMeta[]> {
     const raw = await readObjectText(bucket, mKey);
     if (raw) {
       try {
-        const meta = JSON.parse(raw) as VideoMeta;
-        if (meta.video_id) {
-          meta.key = meta.key || key;
-          byId.set(meta.video_id, meta);
+        const meta = JSON.parse(raw) as Partial<VideoMeta> & {
+          iteration?: number;
+        };
+        meta.key = meta.key || key;
+        const normalized = normalizeVideoMeta(meta);
+        if (normalized) {
+          byId.set(normalized.video_id, normalized);
           continue;
         }
       } catch {

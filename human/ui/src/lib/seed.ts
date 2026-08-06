@@ -83,7 +83,7 @@ export function seedIfNeeded(db: Database.Database) {
         is_gold INTEGER NOT NULL DEFAULT 0,
         model_id TEXT,
         cost_usd REAL NOT NULL DEFAULT 0,
-        iteration INTEGER NOT NULL DEFAULT 0,
+        seed INTEGER NOT NULL DEFAULT 0,
         original_name TEXT NOT NULL,
         media_path TEXT NOT NULL,
         active INTEGER NOT NULL DEFAULT 1,
@@ -188,7 +188,7 @@ export function seedIfNeeded(db: Database.Database) {
         : copyMedia(goldSrc, GOLD_VIDEO_ID, ".mov");
       db.prepare(
         `INSERT INTO videos
-          (video_id, task_id, is_gold, model_id, cost_usd, iteration, original_name, media_path, active, created_at)
+          (video_id, task_id, is_gold, model_id, cost_usd, seed, original_name, media_path, active, created_at)
          VALUES (?, ?, 1, NULL, 0, 0, ?, ?, 1, ?)`
       ).run(GOLD_VIDEO_ID, TASK_ID, path.basename(dest), dest, nowIso());
     } else {
@@ -199,10 +199,10 @@ export function seedIfNeeded(db: Database.Database) {
         ).run(preferred, path.basename(preferred), GOLD_VIDEO_ID);
       }
     }
-    const modelSamples: { id: string; iteration: number }[] = [
-      { id: MODEL_VIDEO_ID, iteration: 0 },
-      { id: MODEL_VIDEO_ID_2, iteration: 1 },
-      { id: MODEL_VIDEO_ID_3, iteration: 2 },
+    const modelSamples: { id: string; seed: number }[] = [
+      { id: MODEL_VIDEO_ID, seed: 0 },
+      { id: MODEL_VIDEO_ID_2, seed: 1 },
+      { id: MODEL_VIDEO_ID_3, seed: 2 },
     ];
     for (const sample of modelSamples) {
       const modelVid = db
@@ -216,13 +216,13 @@ export function seedIfNeeded(db: Database.Database) {
           : copyMedia(modelSrc, sample.id, ".mov");
         db.prepare(
           `INSERT INTO videos
-            (video_id, task_id, is_gold, model_id, cost_usd, iteration, original_name, media_path, active, created_at)
+            (video_id, task_id, is_gold, model_id, cost_usd, seed, original_name, media_path, active, created_at)
            VALUES (?, ?, 0, ?, 0, ?, ?, ?, 1, ?)`
         ).run(
           sample.id,
           TASK_ID,
           SAMPLE_MODEL_ID,
-          sample.iteration,
+          sample.seed,
           path.basename(dest),
           dest,
           nowIso()

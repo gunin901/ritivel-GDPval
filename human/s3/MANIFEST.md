@@ -11,7 +11,7 @@ Admin form fields stored in S3:
 | Gold (expert deliverable) | `is_gold` |
 | Model | `model_id` (null when gold) |
 | Cost (USD) | `cost_usd` |
-| Iteration | `iteration` |
+| Seed | `seed` |
 | (auto) | `video_id`, `original_name`, `key` |
 
 ---
@@ -40,7 +40,7 @@ s3://{bucket}/
             │   └── {video_id}.meta.json   # REQUIRED metadata sidecar
             └── models/
                 └── {model_id}/
-                    └── iter-{n}/
+                    └── seed-{n}/
                         ├── {video_id}.mp4
                         └── {video_id}.meta.json   # REQUIRED
 ```
@@ -50,9 +50,11 @@ s3://{bucket}/
 | Role | Video key | Meta key |
 |---|---|---|
 | Gold | `media/tasks/{task_id}/gold/{video_id}.mp4` | `…/{video_id}.meta.json` |
-| Model | `media/tasks/{task_id}/models/{model_id}/iter-{n}/{video_id}.mp4` | `…/{video_id}.meta.json` |
+| Model | `media/tasks/{task_id}/models/{model_id}/seed-{n}/{video_id}.mp4` | `…/{video_id}.meta.json` |
 
 Platform DB stores `media_path = s3://{bucket}/{key}`.
+
+Legacy `iter-{n}` folders and `iteration` meta fields are still accepted on sync.
 
 ---
 
@@ -63,11 +65,11 @@ Platform DB stores `media_path = s3://{bucket}/{key}`.
   "video_id": "22222222-2222-4222-8222-222222222201",
   "task_id": "e222075d-5d62-4757-ae3c-e34b0846583b",
   "is_gold": false,
-  "model_id": "00000000-0000-4000-8000-0000000000a2",
-  "iteration": 0,
+  "model_id": "00000000-0000-4000-8000-0000000000a1",
+  "seed": 0,
   "cost_usd": 0,
-  "original_name": "claude-opus-sample.mp4",
-  "key": "media/tasks/e222075d-5d62-4757-ae3c-e34b0846583b/models/00000000-0000-4000-8000-0000000000a2/iter-0/22222222-2222-4222-8222-222222222201.mp4"
+  "original_name": "gpt-5-sample.mp4",
+  "key": "media/tasks/e222075d-5d62-4757-ae3c-e34b0846583b/models/00000000-0000-4000-8000-0000000000a1/seed-0/22222222-2222-4222-8222-222222222201.mp4"
 }
 ```
 
@@ -79,7 +81,7 @@ Gold example:
   "task_id": "e222075d-5d62-4757-ae3c-e34b0846583b",
   "is_gold": true,
   "model_id": null,
-  "iteration": 0,
+  "seed": 0,
   "cost_usd": 0,
   "original_name": "gold-green-energy.mp4",
   "key": "media/tasks/e222075d-5d62-4757-ae3c-e34b0846583b/gold/11111111-1111-4111-8111-111111111101.mp4"
@@ -115,7 +117,6 @@ Admin uploads write **both** the video object and this sidecar, and update root 
 | model_id | Display name |
 |---|---|
 | `00000000-0000-4000-8000-0000000000a1` | GPT-5 — high reasoning |
-| `00000000-0000-4000-8000-0000000000a2` | Claude Opus 4.1 |
 | `00000000-0000-4000-8000-0000000000a3` | Gemini 2.5 Pro |
 | `00000000-0000-4000-8000-0000000000a4` | Grok 4 |
 | `00000000-0000-4000-8000-0000000000a5` | GPT-5.6-Sol |
@@ -131,7 +132,7 @@ Admin uploads write **both** the video object and this sidecar, and update root 
 2. Admin clicks **Refresh from S3**.
 3. Platform:
    - Reads `manifest.json` + every `*.meta.json` (+ path inference fallback)
-   - Upserts SQLite `videos` rows (task, gold/model, cost, iteration, video_id, media_path)
+   - Upserts SQLite `videos` rows (task, gold/model, cost, seed, video_id, media_path)
    - Creates **new comparisons** for every active grader: each new model sample × that task’s gold
 4. Graders see new items in their queue on next `/grade` load.
 
@@ -144,8 +145,8 @@ Export (`/api/admin/export`) is **one row per comparison** (participant × task 
 - Participant: id, name, email  
 - Task id  
 - Comparison id, status, queue order, A/B order  
-- Model video: video_id, model_id, model name, iteration, cost_usd, original_name, media_path  
-- Gold video: video_id, iteration, cost_usd, original_name, media_path  
+- Model video: video_id, model_id, model name, seed, cost_usd, original_name, media_path  
+- Gold video: video_id, seed, cost_usd, original_name, media_path  
 - Rating (when submitted): label, score, tags, justification, seconds, qc_flag  
 
 ---

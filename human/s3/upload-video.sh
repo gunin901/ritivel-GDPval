@@ -3,7 +3,7 @@
 #
 # Usage:
 #   ./upload-video.sh --task TASK_ID --gold --file ./gold.mp4
-#   ./upload-video.sh --task TASK_ID --model MODEL_ID --iter 0 --file ./sample.mp4 [--cost 12.5]
+#   ./upload-video.sh --task TASK_ID --model MODEL_ID --seed 0 --file ./sample.mp4 [--cost 12.5]
 #
 # Requires: aws CLI, jq or python3, bucket env S3_BUCKET (or default ritivel-gdpval-eval-videos)
 
@@ -13,7 +13,7 @@ BUCKET="${S3_BUCKET:-ritivel-gdpval-eval-videos}"
 PREFIX="${S3_PREFIX:-media}"
 TASK=""
 MODEL=""
-ITER=0
+SEED=0
 COST=0
 IS_GOLD=0
 FILE=""
@@ -23,7 +23,7 @@ while [[ $# -gt 0 ]]; do
   case "$1" in
     --task) TASK="$2"; shift 2 ;;
     --model) MODEL="$2"; shift 2 ;;
-    --iter) ITER="$2"; shift 2 ;;
+    --seed|--iter) SEED="$2"; shift 2 ;;
     --cost) COST="$2"; shift 2 ;;
     --gold) IS_GOLD=1; shift ;;
     --file) FILE="$2"; shift 2 ;;
@@ -53,7 +53,7 @@ ORIGINAL="$(basename "${FILE}")"
 if [[ "${IS_GOLD}" -eq 1 ]]; then
   KEY="${PREFIX}/tasks/${TASK}/gold/${VIDEO_ID}.${EXT}"
 else
-  KEY="${PREFIX}/tasks/${TASK}/models/${MODEL}/iter-${ITER}/${VIDEO_ID}.${EXT}"
+  KEY="${PREFIX}/tasks/${TASK}/models/${MODEL}/seed-${SEED}/${VIDEO_ID}.${EXT}"
 fi
 
 CT="video/mp4"
@@ -64,7 +64,7 @@ echo "Uploading s3://${BUCKET}/${KEY}"
 aws s3 cp "${FILE}" "s3://${BUCKET}/${KEY}" \
   --content-type "${CT}" \
   --cache-control "public, max-age=31536000, immutable" \
-  --metadata "video_id=${VIDEO_ID},task_id=${TASK},is_gold=${IS_GOLD},model_id=${MODEL},iteration=${ITER}"
+  --metadata "video_id=${VIDEO_ID},task_id=${TASK},is_gold=${IS_GOLD},model_id=${MODEL},seed=${SEED}"
 
 # Merge into manifest.json
 python3 - <<PY
@@ -76,7 +76,7 @@ entry = {
   "task_id": "${TASK}",
   "is_gold": ${IS_GOLD} == 1,
   "model_id": None if ${IS_GOLD} == 1 else "${MODEL}",
-  "iteration": int("${ITER}"),
+  "seed": int("${SEED}"),
   "cost_usd": float("${COST}"),
   "original_name": "${ORIGINAL}",
   "key": "${KEY}",

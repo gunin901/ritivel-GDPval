@@ -55,7 +55,7 @@ db.pragma("journal_mode = WAL");
 
 const insert = db.prepare(`
   INSERT INTO videos
-    (video_id, task_id, is_gold, model_id, cost_usd, iteration, original_name, media_path, active, created_at)
+    (video_id, task_id, is_gold, model_id, cost_usd, seed, original_name, media_path, active, created_at)
   VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, ?)
 `);
 const exists = db.prepare(`SELECT video_id FROM videos WHERE video_id = ?`);
@@ -75,13 +75,19 @@ const tx = db.transaction(() => {
       continue;
     }
     const mediaPath = `s3://${bucket}/${v.key.replace(/^\//, "")}`;
+    const seed =
+      v.seed != null
+        ? Number(v.seed)
+        : v.iteration != null
+          ? Number(v.iteration)
+          : 0;
     insert.run(
       v.video_id,
       v.task_id,
       v.is_gold ? 1 : 0,
       v.is_gold ? null : v.model_id,
       Number(v.cost_usd || 0),
-      Number(v.iteration || 0),
+      seed || 0,
       v.original_name || path.basename(v.key),
       mediaPath,
       now

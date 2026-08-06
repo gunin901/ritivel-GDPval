@@ -50,7 +50,7 @@ function migrate(db: Database.Database) {
       is_gold INTEGER NOT NULL DEFAULT 0,
       model_id TEXT,
       cost_usd REAL NOT NULL DEFAULT 0,
-      iteration INTEGER NOT NULL DEFAULT 0,
+      seed INTEGER NOT NULL DEFAULT 0,
       original_name TEXT NOT NULL,
       media_path TEXT NOT NULL,
       active INTEGER NOT NULL DEFAULT 1,
@@ -122,6 +122,17 @@ function migrate(db: Database.Database) {
       "ALTER TABLE comparisons ADD COLUMN queue_index INTEGER NOT NULL DEFAULT 0"
     );
   }
+
+  // Rename legacy videos.iteration → seed
+  const videoCols = db.prepare("PRAGMA table_info(videos)").all() as {
+    name: string;
+  }[];
+  const videoNames = new Set(videoCols.map((c) => c.name));
+  if (videoNames.has("iteration") && !videoNames.has("seed")) {
+    db.exec("ALTER TABLE videos RENAME COLUMN iteration TO seed");
+  } else if (!videoNames.has("seed") && !videoNames.has("iteration")) {
+    db.exec("ALTER TABLE videos ADD COLUMN seed INTEGER NOT NULL DEFAULT 0");
+  }
 }
 
 export type ModelRow = {
@@ -147,7 +158,7 @@ export type VideoRow = {
   is_gold: number;
   model_id: string | null;
   cost_usd: number;
-  iteration: number;
+  seed: number;
   original_name: string;
   media_path: string;
   active: number;

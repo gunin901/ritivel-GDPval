@@ -42,7 +42,7 @@ export async function syncVideosFromS3(): Promise<SyncResult> {
   const select = db.prepare("SELECT video_id FROM videos WHERE video_id = ?");
   const insert = db.prepare(`
     INSERT INTO videos
-      (video_id, task_id, is_gold, model_id, cost_usd, iteration, original_name, media_path, active, created_at)
+      (video_id, task_id, is_gold, model_id, cost_usd, seed, original_name, media_path, active, created_at)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, ?)
   `);
   const update = db.prepare(`
@@ -51,7 +51,7 @@ export async function syncVideosFromS3(): Promise<SyncResult> {
       is_gold = ?,
       model_id = ?,
       cost_usd = ?,
-      iteration = ?,
+      seed = ?,
       original_name = ?,
       media_path = ?,
       active = 1
@@ -76,7 +76,7 @@ export async function syncVideosFromS3(): Promise<SyncResult> {
           v.is_gold ? 1 : 0,
           v.is_gold ? null : v.model_id,
           Number(v.cost_usd || 0),
-          Number(v.iteration || 0),
+          Number(v.seed || 0),
           v.original_name || v.key.split("/").pop() || v.video_id,
           mediaPath,
           v.video_id
@@ -89,7 +89,7 @@ export async function syncVideosFromS3(): Promise<SyncResult> {
           v.is_gold ? 1 : 0,
           v.is_gold ? null : v.model_id,
           Number(v.cost_usd || 0),
-          Number(v.iteration || 0),
+          Number(v.seed || 0),
           v.original_name || v.key.split("/").pop() || v.video_id,
           mediaPath,
           nowIso()

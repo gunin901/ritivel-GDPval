@@ -170,7 +170,7 @@ Do **not** bind the eval to CapCut/Remotion UIs — keep the agent on ffmpeg in 
 
 
 
-### 5.1 Model roster (8 models)
+### 5.1 Model roster (7 models)
 
 Pick and freeze exact API strings before the run. Suggested mix (paper + current frontier):
 
@@ -180,11 +180,10 @@ Pick and freeze exact API strings before the run. Suggested mix (paper + current
 | 1   | GPT-4o                                                      | OpenAI    |
 | 2   | o3 / o4-mini (one reasoning model)                          | OpenAI    |
 | 3   | GPT-5.x flagship (e.g. `gpt-5.6-sol` or current equivalent) | OpenAI    |
-| 4   | Claude Opus 4.1                                             | Anthropic |
-| 5   | Claude Opus 5 / Sonnet 5 (current flagship)                 | Anthropic |
-| 6   | Gemini 2.5 Pro or Gemini 3.x                                | Google    |
-| 7   | Grok 4 / 4.5                                                | xAI       |
-| 8   | One open-weight frontier (e.g. DeepSeek-V4 / Kimi K3)       | open      |
+| 4   | Claude Opus 5 / Sonnet 5 (current flagship)                 | Anthropic |
+| 5   | Gemini 2.5 Pro or Gemini 3.x                                | Google    |
+| 6   | Grok 4 / 4.5                                                | xAI       |
+| 7   | One open-weight frontier (e.g. DeepSeek-V4 / Kimi K3)       | open      |
 
 
 Record in `runs/<run_id>/manifest.json`: model string, snapshot date, reasoning effort, track, image digest, git SHA.
@@ -192,7 +191,7 @@ Record in `runs/<run_id>/manifest.json`: model string, snapshot date, reasoning 
 ### 5.2 Sampling matrix
 
 ```
-8 models × 2 tasks × 3 samples = 48 agent runs
+7 models × 2 tasks × 3 samples = 42 agent runs
 ```
 
 Optional later: elicited prompt (paper §A.3) as a second condition — not required for the first pass.

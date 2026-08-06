@@ -4,7 +4,7 @@ import { getDb } from "@/lib/db";
 
 /**
  * One JSONL row per rating with full granularity:
- * participant × task × comparison × model-video details (id, model, cost, iteration)
+ * participant × task × comparison × model-video details (id, model, cost, seed)
  * and paired gold video details.
  */
 export async function GET() {
@@ -27,12 +27,12 @@ export async function GET() {
          v.video_id as video_id_model,
          v.model_id,
          m.display_name as model_name,
-         v.iteration as model_iteration,
+         v.seed as model_seed,
          v.cost_usd as model_cost_usd,
          v.original_name as model_original_name,
          v.media_path as model_media_path,
          g.video_id as video_id_gold,
-         g.iteration as gold_iteration,
+         g.seed as gold_seed,
          g.original_name as gold_original_name,
          g.media_path as gold_media_path,
          g.cost_usd as gold_cost_usd,
@@ -76,13 +76,13 @@ export async function GET() {
       video_id_model: r.video_id_model,
       model_id: r.model_id,
       model_name: r.model_name,
-      model_iteration: r.model_iteration,
+      model_seed: r.model_seed,
       model_cost_usd: r.model_cost_usd,
       model_original_name: r.model_original_name,
       model_media_path: r.model_media_path,
       // Gold video
       video_id_gold: r.video_id_gold,
-      gold_iteration: r.gold_iteration,
+      gold_seed: r.gold_seed,
       gold_original_name: r.gold_original_name,
       gold_media_path: r.gold_media_path,
       gold_cost_usd: r.gold_cost_usd,

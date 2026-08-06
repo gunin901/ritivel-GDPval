@@ -33,7 +33,7 @@ export async function POST(req: Request) {
   const is_gold = String(fd.get("is_gold") ?? "0") === "1";
   const model_id = String(fd.get("model_id") ?? "") || null;
   const cost_usd = Number(fd.get("cost_usd") ?? 0);
-  const iteration = Number(fd.get("iteration") ?? 0);
+  const seed = Number(fd.get("seed") ?? fd.get("iteration") ?? 0);
 
   if (!(file instanceof File)) {
     return NextResponse.json({ error: "file required" }, { status: 400 });
@@ -61,14 +61,14 @@ export async function POST(req: Request) {
       taskId: task_id,
       isGold: is_gold,
       modelId: model_id,
-      iteration,
+      seed,
       costUsd: cost_usd,
     }
   );
   const db = getDb();
   db.prepare(
     `INSERT INTO videos
-      (video_id, task_id, is_gold, model_id, cost_usd, iteration, original_name, media_path, active, created_at)
+      (video_id, task_id, is_gold, model_id, cost_usd, seed, original_name, media_path, active, created_at)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, ?)`
   ).run(
     videoId,
@@ -76,7 +76,7 @@ export async function POST(req: Request) {
     is_gold ? 1 : 0,
     is_gold ? null : model_id,
     cost_usd,
-    iteration,
+    seed,
     stored.original_name,
     stored.media_path,
     nowIso()

@@ -5,10 +5,6 @@ export const HARDCODED_MODELS = [
     display_name: "GPT-5 — high reasoning",
   },
   {
-    id: "00000000-0000-4000-8000-0000000000a2",
-    display_name: "Claude Opus 4.1",
-  },
-  {
     id: "00000000-0000-4000-8000-0000000000a3",
     display_name: "Gemini 2.5 Pro",
   },
