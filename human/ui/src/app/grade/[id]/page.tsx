@@ -179,7 +179,7 @@ export default function GradeDetailPage() {
         <pre className="mt-3 max-h-64 overflow-auto whitespace-pre-wrap text-sm text-violet-800">
           {detail.task.prompt}
         </pre>
-        {refs && (refs.highlights.length > 0 || refs.galleryPath) ? (
+        {refs && refs.highlights.length > 0 ? (
           <div className="mt-4 flex flex-wrap gap-2 border-t border-[var(--border)] pt-4">
             {refs.highlights.map((h) =>
               h.url ? (
@@ -198,17 +198,60 @@ export default function GradeDetailPage() {
                 </a>
               ) : null
             )}
-            {refs.galleryPath ? (
-              <a
-                href={refs.galleryPath}
-                className="rounded-xl border border-[var(--border)] bg-white px-4 py-2.5 text-sm font-bold text-violet-900 hover:bg-[var(--surface)]"
-              >
-                Browse all reel clips
-              </a>
-            ) : null}
           </div>
         ) : null}
       </details>
+
+      {refs && refs.gallery.length > 0 ? (
+        <section className="space-y-3">
+          <div className="flex flex-wrap items-end justify-between gap-2">
+            <h2 className="text-lg font-bold text-violet-950">
+              Reel footage
+            </h2>
+            <p className="text-sm text-[var(--muted)]">
+              {refs.gallery.length} reference clips
+            </p>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2">
+            {refs.gallery.map((item) => (
+              <div
+                key={item.id}
+                className="overflow-hidden rounded-2xl border border-[var(--border)] bg-white"
+              >
+                <div className="border-b border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-xs font-semibold text-violet-900">
+                  {item.label}
+                </div>
+                {item.url && item.kind === "video" ? (
+                  <video
+                    className="aspect-video w-full bg-black"
+                    controls
+                    playsInline
+                    preload="metadata"
+                    src={item.url}
+                  />
+                ) : item.url && item.kind === "audio" ? (
+                  <div className="p-3">
+                    <audio className="w-full" controls src={item.url} />
+                  </div>
+                ) : item.url ? (
+                  <div className="p-3">
+                    <a
+                      href={item.url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-sm font-semibold text-[var(--accent)] underline"
+                    >
+                      Open {item.label}
+                    </a>
+                  </div>
+                ) : (
+                  <p className="p-3 text-sm text-red-600">Unavailable</p>
+                )}
+              </div>
+            ))}
+          </div>
+        </section>
+      ) : null}
 
       <div className="grid gap-4 lg:grid-cols-2">
         <StreamPlayer label="Deliverable A" src={detail.media.A} />
