@@ -23,9 +23,9 @@ export async function POST(
   if (!["a", "tie", "b"].includes(choice)) {
     return NextResponse.json({ error: "invalid choice" }, { status: 400 });
   }
-  if (wordCount(justification) < 50) {
+  if (wordCount(justification) < 30) {
     return NextResponse.json(
-      { error: "justification must be at least 50 words" },
+      { error: "justification must be at least 30 words" },
       { status: 400 }
     );
   }

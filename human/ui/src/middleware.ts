@@ -20,7 +20,7 @@ export async function middleware(request: NextRequest) {
       return NextResponse.redirect(new URL("/login", request.url));
     }
     if (pathname.startsWith("/admin") && !session.isAdmin) {
-      return NextResponse.redirect(new URL("/grade", request.url));
+      return NextResponse.redirect(new URL("/grade/instructions", request.url));
     }
     if (pathname.startsWith("/grade") && session.isAdmin) {
       return NextResponse.redirect(new URL("/admin", request.url));

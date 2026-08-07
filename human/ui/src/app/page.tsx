@@ -9,5 +9,5 @@ export default async function HomePage() {
   const resolved = await resolveParticipant();
   if (!resolved) redirect("/api/auth/logout");
   if (resolved.session.isAdmin) redirect("/admin");
-  redirect("/grade");
+  redirect("/grade/instructions");
 }

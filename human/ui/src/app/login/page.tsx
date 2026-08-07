@@ -22,7 +22,7 @@ export default function LoginPage() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Login failed");
-      router.replace(data.isAdmin ? "/admin" : "/grade");
+      router.replace(data.isAdmin ? "/admin" : "/grade/instructions");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Login failed");
     } finally {

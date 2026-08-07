@@ -129,3 +129,7 @@ export function wordCount(text: string): number {
     .split(/\s+/)
     .filter(Boolean).length;
 }
+
+/** localStorage key — participant has read the instructions page */
+export const INSTRUCTIONS_ACK_KEY = "gdpval-instructions-ack";
+

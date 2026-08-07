@@ -101,7 +101,7 @@ async function main() {
     mapped.label,
     mapped.score,
     "[]",
-    "word ".repeat(50).trim(),
+    "word ".repeat(30).trim(),
     200,
     nowIso()
   );

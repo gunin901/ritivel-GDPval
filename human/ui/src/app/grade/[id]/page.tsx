@@ -2,7 +2,12 @@
 
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { FAILURE_TAGS, FAILURE_TAG_INFO, wordCount } from "@/lib/constants";
+import {
+  FAILURE_TAGS,
+  FAILURE_TAG_INFO,
+  INSTRUCTIONS_ACK_KEY,
+  wordCount,
+} from "@/lib/constants";
 
 type Detail = {
   id: string;
@@ -100,6 +105,14 @@ export default function GradeDetailPage() {
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
+    try {
+      if (localStorage.getItem(INSTRUCTIONS_ACK_KEY) !== "1") {
+        router.replace("/grade/instructions");
+        return;
+      }
+    } catch {
+      /* proceed if storage unavailable */
+    }
     fetch(`/api/grade/${id}`)
       .then(async (r) => {
         const data = await r.json();
@@ -107,7 +120,7 @@ export default function GradeDetailPage() {
         setDetail(data as Detail);
       })
       .catch((e: Error) => setError(e.message));
-  }, [id]);
+  }, [id, router]);
 
   useEffect(() => {
     if (!detail?.task.id) return;
@@ -312,7 +325,7 @@ export default function GradeDetailPage() {
         </div>
 
         <label className="block text-sm font-semibold text-violet-900">
-          Justification ({words}/50 words min)
+          Justification ({words}/30 words min)
           <textarea
             className="mt-1.5 min-h-36 w-full rounded-xl border border-[var(--border)] bg-[var(--surface)] px-4 py-3 outline-none focus:border-[var(--accent)]"
             value={justification}
@@ -325,7 +338,7 @@ export default function GradeDetailPage() {
 
         <button
           type="submit"
-          disabled={!choice || words < 50 || submitting || detail.status === "done"}
+          disabled={!choice || words < 30 || submitting || detail.status === "done"}
           className="rounded-xl bg-[var(--accent)] px-6 py-3.5 text-sm font-bold text-white disabled:opacity-50"
         >
           {submitting ? "Submitting…" : "Submit rating"}
